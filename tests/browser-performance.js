@@ -1,0 +1,9 @@
+async (page) => {
+ await page.getByRole('button',{name:'Open world map',exact:true}).first().click();await page.getByRole('button',{name:'Select Thiruvananthapuram',exact:true}).click();await page.getByRole('button',{name:'Explore this location',exact:true}).click();await page.waitForFunction(()=>window.__KOW__?.diagnostics().area==='thiruvananthapuram');
+ const measure=async quality=>{
+  await page.getByRole('button',{name:'Open settings',exact:true}).click();await page.getByRole('button',{name:'World & display',exact:true}).click();await page.getByRole('combobox',{name:'Graphics quality',exact:true}).selectOption(quality);await page.getByRole('button',{name:'Done',exact:false}).click();await page.waitForTimeout(2000);
+  const timing=await page.evaluate(()=>new Promise(resolve=>{const samples=[];let previous=performance.now();const tick=now=>{samples.push(now-previous);previous=now;if(samples.length===180){const sorted=[...samples].sort((a,b)=>a-b);resolve({meanFPS:1000/(samples.reduce((a,b)=>a+b,0)/samples.length),p95FrameMilliseconds:sorted[Math.floor(sorted.length*.95)],framesOver50ms:samples.filter(x=>x>50).length});}else requestAnimationFrame(tick);};requestAnimationFrame(tick);}));
+  return {quality,...timing,snapshot:await page.evaluate(()=>window.__KOW__.snapshot()),viewport:page.viewportSize(),userAgent:await page.evaluate(()=>navigator.userAgent)};
+ };
+ const medium=await measure('medium'),low=await measure('low');await page.screenshot({path:'output/playwright/24-low-mode-benchmark.png'});await page.getByRole('button',{name:'Open settings',exact:true}).click();await page.getByRole('button',{name:'Reset defaults',exact:false}).click();await page.getByRole('button',{name:'Done',exact:false}).click();return {scene:'Thiruvananthapuram (dense source coverage)',medium,low};
+}

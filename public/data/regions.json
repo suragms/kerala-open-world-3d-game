@@ -1,0 +1,268 @@
+[
+  {
+    "id": "thiruvananthapuram",
+    "name": "Thiruvananthapuram",
+    "town": "Thiruvananthapuram",
+    "landmark": "Padmanabhaswamy Temple",
+    "lat": 8.4827546,
+    "lon": 76.94388295,
+    "origin": [
+      76.9435,
+      8.4828
+    ],
+    "theme": "temple",
+    "biome": "Urban coast",
+    "description": "The capital, temple streets and the southern coast.",
+    "source": "https://www.openstreetmap.org/relation/1650471",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "kollam",
+    "name": "Kollam",
+    "town": "Kollam",
+    "landmark": "Kollam Beach",
+    "lat": 8.87428895,
+    "lon": 76.58920334999999,
+    "origin": [
+      76.5863,
+      8.8744
+    ],
+    "theme": "beach",
+    "biome": "Coast & lakes",
+    "description": "Fishing harbours, coastal promenades and Ashtamudi waters.",
+    "source": "https://www.openstreetmap.org/way/101010838",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "pathanamthitta",
+    "name": "Pathanamthitta",
+    "town": "Aranmula",
+    "landmark": "Aranmula Parthasarathy Temple",
+    "lat": 9.328,
+    "lon": 76.687614,
+    "origin": [
+      76.6834,
+      9.3267
+    ],
+    "theme": "temple",
+    "biome": "River country",
+    "description": "Traditional architecture beside the Pamba river.",
+    "source": "https://www.keralatourism.org/temples/pathanamthitta/aranmula-parthasarathy",
+    "verification": "official-tourism-coordinate-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "alappuzha",
+    "name": "Alappuzha",
+    "town": "Alappuzha",
+    "landmark": "Alappuzha Beach",
+    "lat": 9.49299,
+    "lon": 76.317698,
+    "origin": [
+      76.3175,
+      9.4928
+    ],
+    "theme": "beach",
+    "biome": "Backwater coast",
+    "description": "Canals, coconut groves and the Arabian Sea.",
+    "source": "https://www.openstreetmap.org/node/13621219401",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "kottayam",
+    "name": "Kottayam",
+    "town": "Kumarakom",
+    "landmark": "Kumarakom Bird Sanctuary",
+    "lat": 9.6273601,
+    "lon": 76.42859,
+    "origin": [
+      76.4312,
+      9.627
+    ],
+    "theme": "backwater",
+    "biome": "Backwaters",
+    "description": "Vembanad shores, birdlife and village lanes.",
+    "source": "https://www.openstreetmap.org/node/10718965941",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "idukki",
+    "name": "Idukki",
+    "town": "Munnar",
+    "landmark": "Munnar Tea Museum",
+    "lat": 10.094291,
+    "lon": 77.0504976,
+    "origin": [
+      77.0522,
+      10.0983
+    ],
+    "theme": "tea",
+    "biome": "Western Ghats",
+    "description": "Tea gardens, winding roads and mist in the hills.",
+    "source": "https://www.openstreetmap.org/relation/15401924",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "ernakulam",
+    "name": "Ernakulam",
+    "town": "Fort Kochi",
+    "landmark": "Chinese Fishing Nets",
+    "lat": 9.9681914,
+    "lon": 76.2421678,
+    "origin": [
+      76.2421,
+      9.9675
+    ],
+    "theme": "fishing",
+    "biome": "Historic coast",
+    "description": "Trading streets and the fishing nets of Fort Kochi.",
+    "source": "https://www.openstreetmap.org/node/600348761",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "thrissur",
+    "name": "Thrissur",
+    "town": "Thrissur",
+    "landmark": "Vadakkunnathan Temple",
+    "lat": 10.5243568,
+    "lon": 76.2144829,
+    "origin": [
+      76.2145,
+      10.5242
+    ],
+    "theme": "temple",
+    "biome": "Cultural capital",
+    "description": "Thekkinkadu Maidan, temple roofs and Swaraj Round.",
+    "source": "https://www.openstreetmap.org/node/9841160136",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "palakkad",
+    "name": "Palakkad",
+    "town": "Palakkad",
+    "landmark": "Palakkad Fort",
+    "lat": 10.763623849999998,
+    "lon": 76.6567998,
+    "origin": [
+      76.6555,
+      10.7631
+    ],
+    "theme": "fort",
+    "biome": "Palakkad Gap",
+    "description": "Laterite ramparts, paddy country and mountain horizons.",
+    "source": "https://www.openstreetmap.org/way/194737252",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "malappuram",
+    "name": "Malappuram",
+    "town": "Malappuram",
+    "landmark": "Kottakkunnu",
+    "lat": 11.04674015,
+    "lon": 76.0828945,
+    "origin": [
+      76.0828945,
+      11.04674015
+    ],
+    "theme": "park",
+    "biome": "Hill country",
+    "description": "A green hilltop above the streets of Malappuram.",
+    "source": "https://www.openstreetmap.org/way/319063007",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "kozhikode",
+    "name": "Kozhikode",
+    "town": "Kozhikode",
+    "landmark": "Kozhikode Beach",
+    "lat": 11.2516316,
+    "lon": 75.7711608,
+    "origin": [
+      75.77,
+      11.2593
+    ],
+    "theme": "beach",
+    "biome": "Malabar coast",
+    "description": "Sea breezes, markets and the historic Malabar coast.",
+    "source": "https://www.openstreetmap.org/node/10240443491",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "wayanad",
+    "name": "Wayanad",
+    "town": "Padinjarathara",
+    "landmark": "Banasura Sagar Dam",
+    "lat": 11.6712202,
+    "lon": 75.9564734,
+    "origin": [
+      75.9575,
+      11.6705
+    ],
+    "theme": "dam",
+    "biome": "Misty highlands",
+    "description": "Mountain roads, forest and the Banasura reservoir.",
+    "source": "https://www.openstreetmap.org/node/9815272512",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "kannur",
+    "name": "Kannur",
+    "town": "Kannur",
+    "landmark": "St. Angelo Fort",
+    "lat": 11.854045,
+    "lon": 75.3718275,
+    "origin": [
+      75.3714,
+      11.8541
+    ],
+    "theme": "fort",
+    "biome": "Northern coast",
+    "description": "Red laterite forts, palms and broad sea views.",
+    "source": "https://www.openstreetmap.org/way/542192379",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  },
+  {
+    "id": "kasaragod",
+    "name": "Kasaragod",
+    "town": "Bekal",
+    "landmark": "Bekal Fort",
+    "lat": 12.3922205,
+    "lon": 75.03277235,
+    "origin": [
+      75.0342,
+      12.3926
+    ],
+    "theme": "fort",
+    "biome": "Northern coast",
+    "description": "Coastal ramparts and coconut-fringed village roads.",
+    "source": "https://www.openstreetmap.org/way/670422415",
+    "verification": "osm-source-and-district-check",
+    "asset": "original-procedural-exterior",
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+  }
+]
