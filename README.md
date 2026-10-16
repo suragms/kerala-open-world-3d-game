@@ -1,0 +1,1 @@
+Kerala Open World is a realistic GTA-inspired 3D exploration game featuring all 14 Kerala districts, real-world locations, vehicles, airports, railways, and interactive gameplay built with Three.js and TypeScript.
