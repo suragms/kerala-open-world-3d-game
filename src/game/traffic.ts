@@ -8,6 +8,7 @@ import { World } from "./world";
 import { toLocal } from "../data/geography";
 import { RailShuttle } from "./rail";
 import { projectRoute, routeLengths, sampleRoute } from "./bus";
+import { TrafficStopDwell } from "./trafficStops";
 
 export interface TrafficAgent {
   model: VehicleModel;
@@ -35,7 +36,7 @@ export class TrafficManager {
   private trainDistance = 0;
   private trainLength = 0;
   private trainAltitude = 0;
-  private agentDwellUntil = new Map<TrafficAgent, number>();
+  private stopDwell = new TrafficStopDwell();
   private trainDwellUntil = 0;
   private stationPositions: Vec2[] = [];
   private relocationTime=0;
@@ -232,7 +233,7 @@ export class TrafficManager {
           const road=nearest.road;
           const choices=road.points.map((p,i)=>({p,i})).filter(({p,i})=>i>0&&distance(p,player)>190&&distance(p,player)<320);
           const target=choices[(index*7)%choices.length];
-          if(target){agent.road=road;agent.segment=target.i;agent.t=.5;agent.direction=road.oneway?1:index%2?1:-1;this.agentDwellUntil.delete(agent);}
+          if(target){agent.road=road;agent.segment=target.i;agent.t=.5;agent.direction=road.oneway?1:index%2?1:-1;this.stopDwell.reset(agent);}
         }
       }
     }
@@ -260,24 +261,13 @@ export class TrafficManager {
       // Bus dwell at bus stops
       let atBusStop = false;
       if (agent.model.kind === "Bus") {
-        const dwell = this.agentDwellUntil.get(agent) ?? 0;
-        if (time < dwell) {
-          atBusStop = true;
-        } else {
-          if (dwell > 0 && time >= dwell) this.agentDwellUntil.delete(agent);
-          const currentPos = {
-            x: road.points[agent.segment - 1]?.x ?? 0,
-            z: road.points[agent.segment - 1]?.z ?? 0,
-          };
-          const nearStop =
-            (this.world as unknown as { busStopPositions?: Vec2[] }).busStopPositions?.some(
-              (s) => distance(s, currentPos) < 12,
-            ) ?? false;
-          if (nearStop && agent.t > 0.3 && agent.t < 0.75) {
-            this.agentDwellUntil.set(agent, time + 4);
-            atBusStop = true;
-          }
-        }
+        const currentPos = {
+          x: road.points[agent.segment - 1]?.x ?? 0,
+          z: road.points[agent.segment - 1]?.z ?? 0,
+        };
+        const nearStop = this.world.busStopPositions.some(s => distance(s, currentPos) < 12);
+        atBusStop = this.stopDwell.waiting(agent, `${road.id}:${agent.segment}:${agent.direction}`,
+          nearStop && agent.t > 0.3 && agent.t < 0.75, time);
       }
 
       const rate = atBusStop || close || playerClose || signal ? 0 : agent.speed;

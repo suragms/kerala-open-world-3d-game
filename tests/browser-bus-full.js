@@ -33,6 +33,13 @@ async (page) => {
   await page.getByRole('button',{name:'Seat 1 available',exact:true}).click();
   await page.getByRole('button',{name:'Begin full journey',exact:true}).click();
   await page.waitForFunction(()=>window.__KOW__.snapshot().bus?.phase==='travelling');
+  await page.getByRole('button',{name:'Get off at next stop',exact:true}).click();
+  for(let i=0;i<2000 && !(await state()).bus.canExit;i++)await advance(2);
+  const requestedStop=await state();
+  check(requestedStop.bus.phase==='dwelling' && requestedStop.bus.acknowledgedStop && !requestedStop.bus.requestStop,'Requested stop was not acknowledged');
+  await advance(15);
+  const resumed=await state();
+  check(resumed.bus.phase==='travelling' && resumed.bus.door===0 && resumed.bus.speed>0,'Bus did not resume after the passenger stayed aboard');
   const before=await page.evaluate(()=>window.__KOW__.perf());
   let lastProgress=0,stationary=0;
   for(let i=0;i<240;i++){
@@ -55,10 +62,15 @@ async (page) => {
   await page.getByRole('button',{name:'Save game',exact:true}).click();
   const save=await page.evaluate(()=>JSON.parse(localStorage.getItem('kow.save.v2')));
   check(save.journeys.at(-1).completed&&save.journeys.at(-1).mode==='full','Full journey completion was not saved');
+  await page.reload();await page.locator('.continue-button').click();await page.waitForFunction(()=>!!window.__KOW__?.snapshot());
+  const restored=await state();
+  check(Math.hypot(restored.position.x-save.position.x,restored.position.z-save.position.z)<5,'Destination position did not restore');
+  check((await page.evaluate(()=>window.__KOW__.controls().avatar.gender))===save.avatar.gender,'Avatar did not restore');
+  check(!(await page.evaluate(()=>window.__KOW__.diagnostics().blocked)),'Restored destination is blocked');
   await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
   await page.getByRole('button',{name:'Select Kannur',exact:true}).click();
   await page.getByRole('button',{name:'Explore this location',exact:true}).click();
   await page.waitForFunction(()=>window.__KOW__?.diagnostics().region==='kannur');
   check(errors.length===0,errors.join('\n'));
-  return {clock:'Accelerated deterministic integration of the normal live simulation; no Fast Journey used',walkingStart,atStation,arrived,phases:[...phases],before,samples,save,continuedExploration:await state(),errors};
+  return {clock:'Accelerated deterministic integration of the normal live simulation; no Fast Journey used',walkingStart,atStation,requestedStop,resumed,arrived,restored,phases:[...phases],before,samples,save,continuedExploration:await state(),errors};
 }

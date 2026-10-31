@@ -120,10 +120,12 @@ export interface BusSnapshot {
   nextStop: string; remaining: number; total: number; seconds: number;
   progress: number; seated: boolean; seat: number | null; occupied: number[];
   requestStop: boolean; canBoard: boolean; canExit: boolean;
+  acknowledgedStop?: string | null;
   camera: string; route: string; type: BusType; passengers: number; mode: "full" | "fast";
   transitioning?: boolean;
 }
 export interface StateNetwork {
+  version?: string | number;
   source: string;
   license: string;
   features: {
@@ -132,6 +134,7 @@ export interface StateNetwork {
     ref: string;
     name: string;
     points: LonLat[];
+    oneway?: boolean | "yes" | "no" | "-1";
   }[];
 }
 export type Gender = "male" | "female";

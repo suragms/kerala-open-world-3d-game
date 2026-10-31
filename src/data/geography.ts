@@ -14,6 +14,8 @@ import type {
   TerrainGrid,
 } from "../types";
 import { validTerrain } from "../game/terrain";
+import { fetchJson as json, object, coordinate, features as validFeatures, validTile } from "./loading";
+export { dataUrl } from "./loading";
 export const METRES_LAT = 111320;
 export function toLocal(coordinate: LonLat, origin: LonLat): Vec2 {
   return {
@@ -195,22 +197,14 @@ export function getAccuracyReport(): AccuracyReport | null {
 // ---------------------------------------------------------------------------
 // Data loading
 // ---------------------------------------------------------------------------
-async function json<T>(url: string): Promise<T> {
-  const response = await fetch(url);
-  if (!response.ok)
-    throw new Error(
-      `Could not load ${url} (${response.status}). Please retry.`,
-    );
-  return response.json();
-}
 let geographyPromise: Promise<Geography> | undefined;
 export function loadGeography(): Promise<Geography> {
   return (geographyPromise ??= Promise.all([
-    json<Region[]>("/data/regions.json"),
-    json<Place[]>("/data/places.json"),
-    json<DistrictCollection>("/data/districts.geojson"),
-    json<StateNetwork>("/data/state-network.json"),
-    json<{ stations: BusStation[]; routes: BusService[] }>("/data/bus-services.json"),
+    json<Region[]>("regions.json", v => Array.isArray(v) && v.length > 0 && v.every(r => object(r) && typeof r.id === "string" && typeof r.name === "string" && coordinate(r.origin) && coordinate([r.lon,r.lat]))),
+    json<Place[]>("places.json", v => Array.isArray(v) && v.every(p => object(p) && typeof p.id === "string" && typeof p.name === "string" && typeof p.district === "string" && coordinate([p.lon,p.lat]))),
+    json<DistrictCollection>("districts.geojson", v => object(v) && Array.isArray(v.features) && v.features.length > 0 && v.features.every(f => object(f) && object(f.properties) && typeof f.properties.id === "string" && object(f.geometry) && ["Polygon","MultiPolygon"].includes(f.geometry.type) && Array.isArray(f.geometry.coordinates))),
+    json<StateNetwork>("state-network.json", v => object(v) && Array.isArray(v.features) && v.features.every(f => object(f) && ["road","rail"].includes(f.kind) && Array.isArray(f.points) && f.points.length >= 2 && f.points.every(coordinate))),
+    json<{ stations: BusStation[]; routes: BusService[] }>("bus-services.json", v => object(v) && Array.isArray(v.stations) && v.stations.every(s => object(s) && typeof s.id === "string" && typeof s.name === "string" && typeof s.district === "string" && typeof s.tile === "string" && coordinate(s.coordinate)) && Array.isArray(v.routes) && v.routes.every(r => object(r) && typeof r.id === "string" && typeof r.file === "string" && Number.isFinite(r.distance) && r.distance > 0)),
   ])
     .then(([regions, places, boundaries, network, buses]) => {
       const stationPlaces: Place[] = buses.stations.map(s => ({ id: s.id, name: s.name, localName: s.localName,
@@ -233,23 +227,33 @@ export function loadGeography(): Promise<Geography> {
 }
 const tiles = new Map<string, Tile>();
 let terrainIndex: Promise<{ areas: Record<string,{file:string}> }> | undefined;
-async function loadTerrain(id: string): Promise<TerrainGrid | undefined> {
-  const index=await (terrainIndex ??= json<{areas:Record<string,{file:string}>}>("/data/terrain-index.json"));
+export async function loadTerrain(id: string): Promise<TerrainGrid | undefined> {
+  const index=await (terrainIndex ??= json<{areas:Record<string,{file:string}>}>("terrain-index.json", v => object(v) && object(v.areas) && Object.values(v.areas).every(r => object(r) && typeof r.file === "string"))
+    .catch(error => { terrainIndex = undefined; throw error; }));
   const record=index.areas[id]; if (!record) return undefined;
-  const grid=await json<TerrainGrid>(`/data/${record.file}`);
+  const grid=await json<TerrainGrid>(record.file, v => object(v) && validTerrain(v as TerrainGrid));
   if (!validTerrain(grid)) throw new Error(`The elevation grid for ${id} is invalid. Please retry.`);
   return grid;
 }
-export async function loadTile(id: string): Promise<Tile> {
-  if (tiles.has(id)) return tiles.get(id)!;
-  const [source,terrain] = await Promise.all([json<Tile>(`/data/${id}.json`),loadTerrain(id)]);
+const pendingTiles = new Map<string, Promise<Tile>>();
+export function loadTile(id: string): Promise<Tile> {
+  const cached = tiles.get(id);
+  if (cached) { tiles.delete(id); tiles.set(id,cached); return Promise.resolve(cached); }
+  const pending = pendingTiles.get(id);
+  if (pending) return pending;
+  const request = loadTileData(id).finally(() => pendingTiles.delete(id));
+  pendingTiles.set(id, request); return request;
+}
+async function loadTileData(id: string): Promise<Tile> {
+  const [source,terrain] = await Promise.all([json<Tile>(`${id}.json`,validTile),loadTerrain(id)]);
+  if (source.id !== id || terrain && (Math.abs(source.origin[0]-terrain.origin[0]) > .000001 || Math.abs(source.origin[1]-terrain.origin[1]) > .000001)) throw new Error(`Geographic origin mismatch for ${id}. Please retry.`);
   const tile={...source,terrain};
   tiles.set(id, tile);
   if (tiles.size > 3) tiles.delete(tiles.keys().next().value!);
   return tile;
 }
 export async function loadBusPlan(service: BusService, geography: Geography, type: BusPlan["type"]): Promise<{ plan: BusPlan; tile: Tile }> {
-  const [route,terrain] = await Promise.all([json<BusRouteData>(`/data/${service.file}`),loadTerrain(`corridor-${service.id}`)]);
+  const [route,terrain] = await Promise.all([json<BusRouteData>(service.file, v => object(v) && object(v.service) && v.service.id === service.id && Array.isArray(v.points) && v.points.length >= 2 && v.points.every(coordinate) && (!v.drivingPoints || Array.isArray(v.drivingPoints) && v.drivingPoints.length >= 2 && v.drivingPoints.every(coordinate)) && validFeatures(v.features) && Array.isArray(v.stops) && v.stops.every(s => object(s) && typeof s.name === "string" && coordinate(s.coordinate))),loadTerrain(`corridor-${service.id}`)]);
   const stations = [service.from, service.to].map(id => geography.busStations.find(s => s.id === id)!);
   if (stations.some(s => !s) || route.points.length < 2) throw new Error("The bus corridor is unavailable.");
   const origin = stations[0].coordinate;

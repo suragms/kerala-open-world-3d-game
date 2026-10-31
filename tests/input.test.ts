@@ -14,12 +14,12 @@ function event(type: string, properties: Record<string, unknown>) {
   return e;
 }
 function setup() {
-  const target = new EventTarget(), canvas = new Canvas(), actions: string[] = [], clicks: number[][] = [], orbits: number[][] = [];
+  const target = new EventTarget(), canvas = new Canvas(), actions: string[] = [], clicks: number[][] = [], orbits: number[][] = [], releases: boolean[] = [];
   Object.defineProperty(globalThis, "window", { configurable: true, value: target });
   let active = true;
   const input = new InputManager(canvas as unknown as HTMLCanvasElement, { ...DEFAULT_SETTINGS, movement: "mouse" }, () => active,
-    { action: name => actions.push(name), click: (x,y) => clicks.push([x,y]), orbit:(x,y)=>orbits.push([x,y]), zoom:()=>{} });
-  return { input, target, canvas, actions, clicks, orbits, setActive:(value:boolean)=>{active=value;} };
+    { action: name => actions.push(name), click: (x,y) => clicks.push([x,y]), orbit:(x,y)=>orbits.push([x,y]), zoom:()=>{}, release:interrupted=>releases.push(interrupted) });
+  return { input, target, canvas, actions, clicks, orbits, releases, setActive:(value:boolean)=>{active=value;} };
 }
 test("Mouse ground selection and UI blocking use the same active context", () => {
   const s=setup();
@@ -30,6 +30,17 @@ test("Mouse ground selection and UI blocking use the same active context", () =>
   s.target.dispatchEvent(event("keydown",{code:"ArrowUp",repeat:false}));
   assert.equal(s.clicks.length,1); assert.equal(s.input.leftHeld,false); assert.equal(s.input.axis("backward","forward","KeyS","KeyW"),0);
   s.input.dispose();
+});
+test("Mouse release preserves a click destination but interrupts held following and lost capture",()=>{
+  const s=setup();
+  s.canvas.dispatchEvent(event("pointerdown",{clientX:300,clientY:400,button:0,pointerId:1}));
+  s.target.dispatchEvent(event("pointerup",{button:0,pointerId:1}));assert.equal(s.releases.at(-1),false);assert.equal(s.input.leftHeld,false);
+  s.canvas.dispatchEvent(event("pointerdown",{clientX:300,clientY:400,button:0,pointerId:1}));
+  s.canvas.dispatchEvent(event("lostpointercapture",{}));assert.equal(s.releases.at(-1),true);assert.equal(s.input.leftHeld,false);
+  s.canvas.dispatchEvent(event("pointerdown",{clientX:300,clientY:400,button:0,pointerId:1}));s.target.dispatchEvent(new Event("blur"));
+  assert.equal(s.input.leftHeld,false);assert.equal(s.releases.at(-1),true);
+  s.input.setContext("TRAIN_PASSENGER");s.target.dispatchEvent(event("keydown",{code:"KeyW",repeat:false}));assert.equal(s.input.axis("backward","forward","KeyS","KeyW"),0);
+  s.input.dispose();s.target.dispatchEvent(event("keydown",{code:"KeyW",repeat:false}));assert.equal(s.input.keys.size,0);
 });
 test("Driving brake does not orbit the camera; dedicated look-around does", () => {
   const s=setup(); s.input.driving=true; s.input.setContext("IN_VEHICLE");

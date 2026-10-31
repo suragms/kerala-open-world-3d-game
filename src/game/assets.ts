@@ -219,28 +219,38 @@ export function roof(
 
 /** Bake static props by material. Mesh bounds remain per geographic chunk. */
 export function bake(group: THREE.Group) {
+  for (const _step of bakeSteps(group)) { /* Startup/static models can finish synchronously. */ }
+  return group;
+}
+export function* bakeSteps(group: THREE.Group): Generator<void> {
   group.updateMatrixWorld(true);
   const byMaterial = new Map<THREE.Material, THREE.BufferGeometry[]>(),
     rootInverse = group.matrixWorld.clone().invert();
   const remove: THREE.Object3D[] = [];
   const fronds = new Map<THREE.Material, THREE.Matrix4[]>();
-  group.traverse((obj) => {
+  const objects: THREE.Object3D[] = [];
+  group.traverse(obj => objects.push(obj));
+  const scratch = new Set<THREE.BufferGeometry>();
+  try {
+  for (const obj of objects) {
+    yield;
     if (
       !(obj instanceof THREE.Mesh) ||
       Array.isArray(obj.material) ||
       obj.userData.keep
     )
-      return;
+      continue;
     if (obj.geometry === frondGeometry) {
       const matrices = fronds.get(obj.material) ?? [];
       matrices.push(rootInverse.clone().multiply(obj.matrixWorld));
       fronds.set(obj.material, matrices);
       remove.push(obj);
-      return;
+      continue;
     }
     const g = obj.geometry.index
       ? obj.geometry.toNonIndexed()
       : obj.geometry.clone();
+    scratch.add(g);
     for (const attribute of Object.keys(g.attributes))
       if (!["position", "normal", "uv"].includes(attribute))
         g.deleteAttribute(attribute);
@@ -258,7 +268,7 @@ export function bake(group: THREE.Group) {
     list.push(g);
     byMaterial.set(obj.material, list);
     remove.push(obj);
-  });
+  }
   for (const obj of remove) {
     obj.removeFromParent();
     if (
@@ -270,6 +280,7 @@ export function bake(group: THREE.Group) {
       obj.geometry.dispose();
   }
   for (const [mat, matrices] of fronds) {
+    yield;
     const instanced = new THREE.InstancedMesh(
       frondGeometry,
       mat,
@@ -282,8 +293,9 @@ export function bake(group: THREE.Group) {
     group.add(instanced);
   }
   for (const [mat, list] of byMaterial) {
+    yield;
     const geometry = mergeGeometries(list, false);
-    list.forEach((g) => g.dispose());
+    list.forEach((g) => { g.dispose(); scratch.delete(g); });
     if (geometry) {
       const m = new THREE.Mesh(geometry, mat);
       m.castShadow = true;
@@ -297,7 +309,7 @@ export function bake(group: THREE.Group) {
       empty.push(o);
   });
   empty.forEach((o) => o.removeFromParent());
-  return group;
+  } finally { scratch.forEach(g => g.dispose()); }
 }
 export function disposeGroup(root: THREE.Object3D) {
   const geometries = new Set<THREE.BufferGeometry>();

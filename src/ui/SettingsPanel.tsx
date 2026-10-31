@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { Settings } from "../types";
 import { DEFAULT_SETTINGS } from "../types";
+import { bindingConflict } from "../game/save";
 export function SettingsPanel({
   settings,
   onChange,
@@ -20,7 +21,8 @@ export function SettingsPanel({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<"controls" | "world" | "audio">("controls"),
-    [remapping, setRemapping] = useState<string | null>(null);
+    [remapping, setRemapping] = useState<string | null>(null),
+    [conflict, setConflict] = useState("");
   const update = (key: keyof Settings, value: unknown) =>
     onChange({ ...settings, [key]: value });
   return (
@@ -35,13 +37,11 @@ export function SettingsPanel({
             e.preventDefault();
             e.stopPropagation();
             if (e.code === "Escape") setRemapping(null);
-            else if (
-              !Object.values(settings.bindings).includes(e.code) ||
-              settings.bindings[remapping] === e.code
-            ) {
+            else if (!bindingConflict(settings.bindings, remapping, e.code)) {
               update("bindings", { ...settings.bindings, [remapping]: e.code });
               setRemapping(null);
-            }
+              setConflict("");
+            } else setConflict(bindingConflict(settings.bindings, remapping, e.code)!);
           }
         }}
       >
@@ -77,6 +77,7 @@ export function SettingsPanel({
           ))}
         </div>
         <div className="settings-content">
+          {conflict ? <p role="alert">{conflict} Choose another key, or press Escape to cancel.</p> : null}
           {tab === "controls" ? (
             <>
               <Setting

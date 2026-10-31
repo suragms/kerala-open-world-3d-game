@@ -1,5 +1,6 @@
 import { insideRing, haversine } from "../data/geography";
 import type { Vec2, LonLat, StateNetwork } from "../types";
+import { MinHeap } from "./priorityQueue";
 export const distance = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.z - b.z);
 export function nearestOnSegment(p: Vec2, a: Vec2, b: Vec2): Vec2 {
   const dx = b.x - a.x,
@@ -74,8 +75,18 @@ export class CollisionWorld {
   waterAt?: (p: Vec2) => boolean;
   bridgeAt?: (p: Vec2) => boolean;
   private cells = new Map<string, Obstacle[]>();
+  indexMilliseconds = 0;
+  /** Read-only probe view: shares static indexing, owns its dynamic lists. */
+  withAdditionalBoxes(boxes: CollisionBox[]) {
+    const view = new CollisionWorld();
+    view.obstacles = this.obstacles; view.cells = this.cells;
+    view.boxes = [...this.boxes, ...boxes]; view.circles = this.circles;
+    view.walkableAt = this.walkableAt; view.waterAt = this.waterAt; view.bridgeAt = this.bridgeAt;
+    return view;
+  }
   add(points: Vec2[], water = false, minY = -Infinity, maxY = Infinity) {
     if (points.length < 3) return;
+    const began = performance.now();
     const o = {
       points,
       minX: Math.min(...points.map((p) => p.x)),
@@ -94,6 +105,7 @@ export class CollisionWorld {
         list.push(o);
         this.cells.set(key, list);
       }
+    this.indexMilliseconds += performance.now() - began;
   }
   blocked(p: Vec2, radius = 0.45, ignoreWater = false, y?: number) {
     const overBridge = this.bridgeAt?.(p) ?? false;
@@ -512,15 +524,15 @@ export class RoadNetwork {
     if (!b.road.oneway || distance(b.point,b.road.points[b.index]) < 0.01) ends.push(b.road.points[b.index]);
     const endCosts = new Map(ends.map(p => [this.key(p),distance(p,b.point)]));
     const costs = new Map<string,number>(), previous = new Map<string,string>();
-    const queue: string[] = [], visited = new Set<string>();
+    const queue = new MinHeap<string>(), visited = new Set<string>();
     for (const p of starts) {
       const key = this.key(p), cost = distance(a.point,p);
-      if (cost < (costs.get(key) ?? Infinity)) { costs.set(key,cost); queue.push(key); }
+      if (cost < (costs.get(key) ?? Infinity)) { costs.set(key,cost); queue.push(key,cost); }
     }
     let bestEnd: string | undefined, bestCost = Infinity;
-    while (queue.length) {
-      queue.sort((x,y) => costs.get(x)!-costs.get(y)!);
-      const key = queue.shift()!, cost = costs.get(key)!;
+    while (queue.size) {
+      const { value: key, priority: cost } = queue.pop()!;
+      if (cost !== costs.get(key)) continue;
       if (cost > bestCost) break;
       if (visited.has(key)) continue;
       visited.add(key);
@@ -528,7 +540,7 @@ export class RoadNetwork {
       if (connector !== undefined && cost+connector < bestCost) { bestEnd=key; bestCost=cost+connector; }
       for (const edge of this.graph.get(key)?.edges ?? []) {
         const next = cost+edge.weight;
-        if (next < (costs.get(edge.to) ?? Infinity)) { costs.set(edge.to,next); previous.set(edge.to,key); queue.push(edge.to); }
+        if (next < (costs.get(edge.to) ?? Infinity)) { costs.set(edge.to,next); previous.set(edge.to,key); queue.push(edge.to,next); }
       }
     }
     if (!bestEnd) return [];
@@ -540,103 +552,92 @@ export class RoadNetwork {
 
 }
 
+export type NetworkMode = "road" | "rail";
+export interface RouteEstimate {
+  available: boolean;
+  distanceKm: number | null;
+  minutes: number | null;
+  reason?: string;
+}
+export const validCoordinate = (p: LonLat) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite)
+  && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90;
+const unavailable = (reason: string): RouteEstimate => ({ available: false, distanceKm: null, minutes: null, reason });
+
+/** Imported connectivity only: nearby but distinct coordinates never create an invented junction. */
 export class StateRouter {
-  private graph = new Map<
-    string,
-    { lonlat: LonLat; edges: { to: string; weight: number }[] }
-  >();
-  constructor(network: StateNetwork) {
+  private graph = new Map<string, { lonlat: LonLat; edges: { to: string; weight: number }[] }>();
+  private cells = new Map<string, string[]>();
+  constructor(network: StateNetwork, public mode: NetworkMode = "road") {
+    const key = (p: LonLat) => `${p[0]},${p[1]}`;
     for (const feat of network.features) {
-      const points = feat.points;
+      if (feat.kind !== mode || !feat.points.every(validCoordinate)) continue;
+      const points = feat.oneway === "-1" ? [...feat.points].reverse() : feat.points;
+      for (const p of points) {
+        const k = key(p);
+        if (this.graph.has(k)) continue;
+        this.graph.set(k, { lonlat: p, edges: [] });
+        const cell = `${Math.floor(p[0] / .02)},${Math.floor(p[1] / .02)}`;
+        const list = this.cells.get(cell) ?? []; list.push(k); this.cells.set(cell, list);
+      }
       for (let i = 1; i < points.length; i++) {
-        const p1 = points[i - 1];
-        const p2 = points[i];
-        const k1 = `${p1[0].toFixed(4)},${p1[1].toFixed(4)}`;
-        const k2 = `${p2[0].toFixed(4)},${p2[1].toFixed(4)}`;
-        if (!this.graph.has(k1)) this.graph.set(k1, { lonlat: p1, edges: [] });
-        if (!this.graph.has(k2)) this.graph.set(k2, { lonlat: p2, edges: [] });
-        const weight = haversine(p1, p2);
-        this.graph.get(k1)!.edges.push({ to: k2, weight });
-        this.graph.get(k2)!.edges.push({ to: k1, weight });
+        const a = key(points[i - 1]), b = key(points[i]), weight = haversine(points[i - 1], points[i]);
+        if (!weight) continue;
+        this.graph.get(a)!.edges.push({ to: b, weight });
+        if (![true, "yes", "-1"].includes(feat.oneway ?? false)) this.graph.get(b)!.edges.push({ to: a, weight });
       }
     }
   }
-  private nearestKey(p: LonLat): string {
-    let best = Infinity,
-      bestKey = "";
-    for (const [k, node] of this.graph) {
-      const d = haversine(node.lonlat, p);
-      if (d < best) {
-        best = d;
-        bestKey = k;
+  private nearest(p: LonLat) {
+    let best = Infinity, key = "";
+    const cx = Math.floor(p[0] / .02), cy = Math.floor(p[1] / .02);
+    // Search all cells intersecting the maximum permitted endpoint access distance.
+    for (let x = cx - 2; x <= cx + 2; x++) for (let y = cy - 2; y <= cy + 2; y++)
+      for (const k of this.cells.get(`${x},${y}`) ?? []) {
+        const metres = haversine(this.graph.get(k)!.lonlat, p);
+        if (metres < best) { best = metres; key = k; }
       }
-    }
-    return bestKey;
+    return { key, metres: best };
   }
-  estimate(from: LonLat, to: LonLat): { distanceKm: number; minutes: number } {
-    const startKey = this.nearestKey(from);
-    const endKey = this.nearestKey(to);
-    if (!startKey || !endKey) {
-      const d = haversine(from, to);
-      return { distanceKm: Math.round(d / 1000), minutes: Math.round(d / 1000 * 1.5) };
-    }
-    if (startKey === endKey) {
-      const d = haversine(from, to);
-      return { distanceKm: Math.round(d / 1000), minutes: Math.round(d / 1000 * 1.5) };
-    }
-    const costs = new Map([[startKey, 0]]);
-    const previous = new Map<string, string>();
-    const queue = [startKey];
-    const visited = new Set<string>();
-    while (queue.length) {
-      queue.sort((a, b) => costs.get(a)! - costs.get(b)!);
-      const k = queue.shift()!;
-      if (k === endKey) break;
-      if (visited.has(k)) continue;
-      visited.add(k);
-      for (const edge of this.graph.get(k)?.edges ?? []) {
-        const cost = costs.get(k)! + edge.weight;
-        if (cost < (costs.get(edge.to) ?? Infinity)) {
-          costs.set(edge.to, cost);
-          previous.set(edge.to, k);
-          queue.push(edge.to);
-        }
+  estimate(from: LonLat, to: LonLat): RouteEstimate {
+    if (!validCoordinate(from) || !validCoordinate(to)) return unavailable("Invalid destination coordinates");
+    const a = this.nearest(from), b = this.nearest(to), limit = this.mode === "rail" ? 1000 : 2000;
+    if (!a.key || !b.key || a.metres > limit || b.metres > limit) return unavailable(`No imported ${this.mode} connection near these endpoints`);
+    const costs = new Map([[a.key, 0]]), queue = new MinHeap<string>();
+    queue.push(a.key, 0);
+    while (queue.size) {
+      const { value: key, priority: cost } = queue.pop()!;
+      if (cost !== costs.get(key)) continue;
+      if (key === b.key) {
+        const km = (cost + a.metres + b.metres) / 1000;
+        return { available: true, distanceKm: Math.round(km * 10) / 10,
+          minutes: Math.max(1, Math.round(km / (this.mode === "rail" ? 75 : 45) * 60)) };
+      }
+      for (const edge of this.graph.get(key)!.edges) {
+        const next = cost + edge.weight;
+        if (next < (costs.get(edge.to) ?? Infinity)) { costs.set(edge.to, next); queue.push(edge.to, next); }
       }
     }
-    const dist = costs.get(endKey) ?? haversine(from, to);
-    return { distanceKm: Math.round(dist / 1000), minutes: Math.round(dist / 1000 * 1.4) };
+    return unavailable(`Imported ${this.mode} network is disconnected between these locations`);
   }
 }
 
-let cachedRouter: StateRouter | null = null;
-export function estimateJourney(
-  from: LonLat,
-  to: LonLat,
-  mode: "road" | "rail" | "air",
-  network?: StateNetwork,
-): { distanceKm: number; minutes: number; label: string } {
-  const straight = haversine(from, to);
+// Network objects are immutable between revisions. Callers that edit geometry must bump version.
+const routers = new WeakMap<StateNetwork, { version: StateNetwork["version"]; modes: Map<NetworkMode, StateRouter> }>();
+export function estimateJourney(from: LonLat, to: LonLat, mode: NetworkMode | "air", network?: StateNetwork): RouteEstimate & { label: string } {
   if (mode === "air") {
-    const km = Math.max(25, Math.round(straight / 1000 * 1.15));
-    const mins = Math.max(35, Math.round(km * 0.85 + 45));
-    const hrs = Math.floor(mins / 60);
-    const m = mins % 60;
-    const timeLabel = hrs ? `${hrs}h ${m}m flight incl. check-in` : `${m}m flight`;
-    return { distanceKm: km, minutes: mins, label: `~${km} km · ~${timeLabel}` };
+    if (!validCoordinate(from) || !validCoordinate(to)) return { ...unavailable("Invalid coordinates"), label: "Transfer unavailable" };
+    const km = Math.round(haversine(from, to) / 1000);
+    return { available: true, distanceKm: km, minutes: null, label: `Simulated scene transfer · ${km} km straight-line · no operational flight implied` };
   }
-  if (network) {
-    if (!cachedRouter) cachedRouter = new StateRouter(network);
-    const est = cachedRouter.estimate(from, to);
-    const speedFactor = mode === "rail" ? 75 : 45;
-    const mins = Math.max(10, Math.round((est.distanceKm / speedFactor) * 60));
-    const hrs = Math.floor(mins / 60);
-    const m = mins % 60;
-    const timeLabel = hrs ? `${hrs}h ${m}m` : `${m}m`;
-    return { distanceKm: est.distanceKm, minutes: mins, label: `~${est.distanceKm} km · ~${timeLabel}` };
+  if (!network) return { ...unavailable("No imported network"), label: "Route unavailable · geographic network not loaded" };
+  let cached = routers.get(network);
+  if (!cached || cached.version !== network.version) {
+    cached = { version: network.version, modes: new Map() }; routers.set(network, cached);
   }
-  const km = Math.round(straight / 1000 * 1.25);
-  const mins = Math.round(km * 1.3);
-  const hrs = Math.floor(mins / 60);
-  const m = mins % 60;
-  return { distanceKm: km, minutes: mins, label: `~${km} km · ~${hrs ? `${hrs}h ${m}m` : `${m}m`}` };
+  let router = cached.modes.get(mode);
+  if (!router) { router = new StateRouter(network, mode); cached.modes.set(mode, router); }
+  const est = router.estimate(from, to);
+  if (!est.available) return { ...est, label: `Route unavailable · ${est.reason}` };
+  const mins = est.minutes!, hrs = Math.floor(mins / 60), m = mins % 60;
+  return { ...est, label: `~${est.distanceKm} km · ~${hrs ? `${hrs}h ${m}m` : `${m}m`} · imported ${mode} geometry, simulated timing` };
 }

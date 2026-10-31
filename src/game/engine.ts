@@ -36,6 +36,7 @@ import { controller, vibrate } from "./gamepad";
 import { mouseSteering, smoothSteering, vehicleThrottle } from "./vehicle";
 import { InteractionManager } from "./interactions";
 import { TRAIN_CAMERAS } from "./rail";
+import { curbsideExit } from "./exits";
 
 export interface EngineCallbacks {
   snapshot: (snapshot: Snapshot) => void;
@@ -81,6 +82,7 @@ export class GameEngine {
   handbrake = false;
   private pendingInteraction?: { point: Vec2; run: () => void };
   private pendingVehicleExit = false;
+  private recoveredCheckpoint = false;
   private lastBusPhase = "";
   interactions = new InteractionManager();
   private hovered = "";
@@ -116,6 +118,7 @@ export class GameEngine {
   private elapsed = 0;
   private elapsedHud = 0;
   private frameTimes: number[] = [];
+  private rendererCpu = { last: 0, maximum: 0 };
   private velocity = { x: 0, z: 0 };
   private verticalSpeed = 0;
   private jumpHeight = 0;
@@ -129,6 +132,19 @@ export class GameEngine {
   private disposed = false;
   private resize: ResizeObserver;
   private visibilityHandler: () => void;
+  private contextLost = false;
+  private contextWasPaused = false;
+  private contextLossHandler = (event: Event) => {
+    event.preventDefault();
+    this.contextLost = true; this.contextWasPaused = this.paused;
+    this.input.clear(); this.previous = 0;
+    this.callbacks.notice("The graphics connection was interrupted. Waiting for your browser to restore it. Your progress can still be saved.");
+  };
+  private contextRestoreHandler = () => {
+    this.contextLost = false; this.previous = 0;
+    this.setPaused(this.contextWasPaused);
+    this.callbacks.notice("Graphics restored. You can continue your journey.");
+  };
   private pathLine?: THREE.Line;
   private clickTime = 0;
   private mouseGround?: { x: number; y: number };
@@ -328,6 +344,11 @@ export class GameEngine {
       {
         action: (name) => this.action(name),
         click: (x, y) => this.groundClick(x, y),
+        release: interrupted => {
+          if (interrupted && !this.driving && !this.bus?.attached && !this.trainPassenger) {
+            this.cancelWalk(); this.velocity = { x: 0, z: 0 };
+          }
+        },
         track: (x, y) => {
           this.mouseGround = { x, y };
           if (this.elapsed - this.hoverTime > 0.1 && !this.driving && !this.bus?.attached) { this.hoverTime = this.elapsed; this.hoverInteraction(x, y); }
@@ -364,6 +385,8 @@ export class GameEngine {
     };
     document.addEventListener("visibilitychange", this.visibilityHandler);
     this.applySettings(settings);
+    this.renderer.domElement.addEventListener("webglcontextlost", this.contextLossHandler);
+    this.renderer.domElement.addEventListener("webglcontextrestored", this.contextRestoreHandler);
     this.resizeCanvas();
     this.audio.start();
     this.cameraTarget.set(
@@ -480,11 +503,11 @@ export class GameEngine {
     if (!paused) this.renderer.domElement.focus();
   }
   action(action: string) {
-    if (this.paused) return;
+    if (this.paused || this.contextLost) return;
     if (!this.paused) this.renderer.domElement.focus();
     if (action === "run") return; // Keyboard run is held, the on-screen button is a toggle.
     if (action === "sprintDestination") { if (!this.driving && !this.bus?.attached) this.runEnabled = true; return; }
-    if (action === "lookAround") { this.input.lookAround = !this.input.lookAround; this.input.clear(); return; }
+    if (action === "lookAround") { const look = !this.input.lookAround; this.input.clear(); this.input.lookAround = look; return; }
     if (action === "handbrake") { this.handbrake = !this.handbrake; return; }
     if (action === "reverse") {
       if (this.driving && Math.abs(this.driving.speed) < 0.5) this.reverse = !this.reverse;
@@ -493,7 +516,9 @@ export class GameEngine {
     }
     if (action.startsWith("seat:")) { this.bus?.chooseSeat(Number(action.slice(5))); this.emitSnapshot(); return; }
     if (action === "departBus") { if (this.bus?.depart()) this.audio.cue("departure"); return; }
-    if (action === "requestStop") { this.bus?.requestNextStop(); this.audio.cue("bell"); vibrate(this.settings.gamepadVibration); return; }
+    if (action === "requestStop") { if (this.bus?.requestNextStop()) { this.audio.cue("bell"); vibrate(this.settings.gamepadVibration); } this.emitSnapshot(); return; }
+    if (action === "cancelStopRequest") { this.bus?.cancelStopRequest(); this.emitSnapshot(); return; }
+    if (action === "recoverBusExit") { this.exitBus(true); return; }
     if (action === "exitBus") { this.exitBus(); return; }
     if (action === "walkTrain") {
       const point=this.traffic.rail?.boardingPoint;
@@ -727,6 +752,9 @@ export class GameEngine {
         memory?: { usedJSHeapSize: number; totalJSHeapSize: number };
       }
     ).memory;
+    const sorted = this.frameTimes.map(t=>t*1000).sort((a,b)=>a-b);
+    const percentile = (q: number) => sorted.length ? sorted[Math.min(sorted.length-1,Math.floor(sorted.length*q))] : 0;
+    const worst = sorted.slice(-Math.max(1,Math.ceil(sorted.length*.01)));
     return {
       fps: this.frameTimes.length
         ? Math.round(
@@ -747,6 +775,10 @@ export class GameEngine {
       terminalModels: this.terminals.loaded.size,
       busPassengers: this.busModel?.passengers.length ?? 0,
       streaming: this.world.streamingStats(),
+      rendererCpuMilliseconds: { ...this.rendererCpu },
+      frames: sorted.length, p50FrameMilliseconds: percentile(.5), p95FrameMilliseconds: percentile(.95), p99FrameMilliseconds: percentile(.99),
+      onePercentLowFPS: worst.length ? 1000/(worst.reduce((a,b)=>a+b,0)/worst.length) : 0,
+      longFramesOver50ms: sorted.filter(t=>t>50).length,
     };
   }
   navigateTo(place: Place) {
@@ -981,22 +1013,46 @@ export class GameEngine {
     this.cameraTarget.set(point.x,this.world.height(point.x,point.z)+1.25,point.z);this.callbacks.action("arrivalSave");
     this.emitSnapshot();
   }
-  private exitBus() {
+  private safeBusExit() {
+    if (!this.bus) return undefined;
+    const pose = this.bus.pose;
+    return curbsideExit(this.world.collisions, { center: pose, yaw: pose.yaw, halfWidth: 1.35,
+      halfLength: BUS_SPECS[this.bus.plan.type].length / 2 + .1 }, 3.5 * busScale(this.bus.plan.type),
+      this.player.dimensions.radius + .12, (x,z) => this.world.height(x,z),
+      this.traffic.agents.filter(a => a.model.root.visible).map(a => ({ center: a.model.root.position,
+        yaw: -a.model.root.rotation.y, ...vehicleDimensions(a.model.kind) })));
+  }
+  private exitBus(recover = false) {
     if (!this.bus?.canExit) { this.callbacks.notice("Wait until the bus is stopped and the doors are open."); return; }
-    const pose = this.bus.pose, door = this.busDoorPoint()!;
-    // Check the curbside exit with the bus's physical footprint still present.
-    this.world.collisions.boxes.push({ center: pose, yaw: pose.yaw, halfWidth: 1.4, halfLength: BUS_SPECS[this.bus.plan.type].length/2+0.2 });
-    const point = this.world.collisions.closestValid({ x: door.x - Math.cos(pose.yaw) * 1.5, z: door.z - Math.sin(pose.yaw) * 1.5 }, 0.6);
-    if (!point) { this.callbacks.notice("The passenger exit is blocked. Stay seated."); return; }
+    const pose = this.bus.pose;
+    this.updateVehicleColliders();
+    let point = this.safeBusExit();
+    let recovered = false;
+    if (!point && recover) {
+      const checkpoint = this.safeLocation;
+      if (checkpoint?.area === this.world.tile.id) {
+        const probe = this.world.collisions.withAdditionalBoxes([{ center: pose, yaw: pose.yaw,
+          halfWidth: 1.35, halfLength: BUS_SPECS[this.bus.plan.type].length / 2 + .1 },
+          ...this.traffic.agents.filter(a => a.model.root.visible).map(a => ({ center: a.model.root.position,
+            yaw: -a.model.root.rotation.y, ...vehicleDimensions(a.model.kind) }))]);
+        point = probe.closestValid(checkpoint.position, this.player.dimensions.radius + .12);
+        recovered = Boolean(point);
+      }
+    }
+    if (!point) { this.callbacks.notice("The curbside exit is blocked. Continue to the next stop, use Fast Journey, or choose Recover to safe checkpoint."); return; }
     const record = this.bus.record();
     this.bus.exit(); this.journeys.push(record); this.travelled += record.distance;
+    this.updateVehicleColliders();
     this.position = { ...point }; this.playerYaw = pose.yaw; this.player.root.visible = true;
+    this.recoveredCheckpoint = recovered;
     this.velocity = { x: 0, z: 0 }; this.jumpHeight = this.verticalSpeed = this.actualSpeed = 0;
     this.input.clear(); this.input.setContext("ON_FOOT"); this.cancelWalk();
     this.cameraYaw = this.playerYaw; this.cameraTarget.set(point.x, this.world.height(point.x, point.z) + 1.25, point.z);
-    this.safeLocation = { region: this.bus.target.district, area: this.world.tile.id, position: point, coordinate: toGeo(point, this.world.tile.origin) };
-    if (!this.visited.includes(this.bus.target.district)) this.visited.push(this.bus.target.district);
-    this.callbacks.notice(`${record.completed ? "ARRIVED AT DESTINATION" : "Arrived at stop"} · ${record.to} · ${this.bus.target.district} · ${(record.distance / 1000).toFixed(1)} km · ${Math.round(record.seconds / 60)} in-game minutes · ${record.route}`);
+    const coordinate = toGeo(point, this.world.tile.origin);
+    const district = this.boundaries ? districtAt(coordinate,this.boundaries) ?? this.bus.target.district : this.bus.target.district;
+    this.safeLocation = { region: district, area: this.world.tile.id, position: point, coordinate };
+    if (!this.visited.includes(district)) this.visited.push(district);
+    this.callbacks.notice(recovered ? "Recovered to a safe checkpoint. Your bus journey has been recorded." : `${record.completed ? "ARRIVED AT DESTINATION" : "Arrived at stop"} · ${record.to} · ${district} · ${(record.distance / 1000).toFixed(1)} km · ${Math.round(record.seconds / 60)} in-game minutes · ${record.route}`);
     this.callbacks.action("arrivalSave"); this.emitSnapshot(); vibrate(this.settings.gamepadVibration);
   }
   private updateBus(dt: number) {
@@ -1029,8 +1085,8 @@ export class GameEngine {
       if (bus.phase === "dwelling" || bus.phase === "arrived") {
         vibrate(this.settings.gamepadVibration);
         if (bus.attached) {
-          const exit = this.busDoorPoint()!;
-          this.safeLocation = { region: bus.target.district, area: this.world.tile.id, position: exit, coordinate: toGeo(exit, this.world.tile.origin) };
+          const exit = this.safeBusExit();
+          if (exit) this.safeLocation = { region: bus.target.district, area: this.world.tile.id, position: exit, coordinate: toGeo(exit, this.world.tile.origin) };
         }
       }
       this.lastBusPhase = bus.phase;
@@ -1512,7 +1568,9 @@ export class GameEngine {
     this.updatePlayer(dt);
     this.traffic.update(dt, this.elapsed, this.position);
     if(this.trainPassenger&&this.traffic.rail){const pose=this.traffic.rail.pose;this.position={x:pose.x,z:pose.z};this.playerYaw=pose.yaw;if(this.elapsed>this.orbitUntil)this.cameraYaw=angleLerp(this.cameraYaw,pose.yaw,1-Math.exp(-dt*2));}
-    const lookahead = this.bus?.attached ? this.bus.points[Math.min(this.bus.points.length - 1, this.bus.pose.segment + 6)] : undefined;
+    const lookahead = this.bus?.attached ? this.bus.poseAt(this.bus.travelled + Math.max(100,this.bus.speed*12))
+      : this.driving ? { x: this.position.x + Math.sin(this.driving.yaw)*this.driving.speed*8, z: this.position.z - Math.cos(this.driving.yaw)*this.driving.speed*8 }
+      : undefined;
     this.world.updateStreaming(this.position, false, lookahead);
     this.terminals.update(this.position, dt, this.elapsed, this.bus?.door === 1 ? this.busDoorPoint() : undefined);
     this.updateCamera(dt);
@@ -1568,6 +1626,7 @@ export class GameEngine {
   private tick(now: number) {
     if (this.disposed) return;
     this.frame = requestAnimationFrame((t) => this.tick(t));
+    if (this.contextLost) { this.previous = 0; return; }
     if (document.hidden) {
       this.previous = 0;
       return;
@@ -1576,7 +1635,7 @@ export class GameEngine {
     this.previous = now;
     const dt = Math.min(raw, 0.05);
     this.frameTimes.push(raw);
-    if (this.frameTimes.length > 90) this.frameTimes.shift();
+    if (this.frameTimes.length > 1800) this.frameTimes.shift();
     if (!this.paused) this.simulate(dt);
     this.audio.update(
       this.settings,
@@ -1586,7 +1645,10 @@ export class GameEngine {
       this.elapsed,
       {theme:this.region.theme,nearStation:!!this.terminals.nearby(this.position,45),market:["mall","junction","hub"].includes(this.region.theme),trainSpeed:this.trainPassenger?this.traffic.rail?.speed:this.traffic.train&&distance(this.position,this.traffic.train.children[0].position)<110?this.traffic.rail?.speed:0},
     );
+    const renderBegan = performance.now();
     this.renderer.render(this.scene, this.camera);
+    this.rendererCpu.last = performance.now() - renderBegan;
+    this.rendererCpu.maximum = Math.max(this.rendererCpu.maximum, this.rendererCpu.last);
     this.elapsedHud += raw;
     if (this.elapsedHud > 0.25) {
       this.elapsedHud = 0;
@@ -1676,7 +1738,7 @@ export class GameEngine {
       steering: this.steering,
       reverse: this.reverse,
       handbrake: this.handbrake,
-      locality: this.bus?.phase === "exited" || this.bus?.phase === "arrived" ? this.bus.target.name : this.bus?.attached ? this.world.nearestRoadName(this.position) : this.region.town,
+      locality: this.bus?.phase === "exited" && this.recoveredCheckpoint ? "Safe checkpoint" : this.bus?.phase === "exited" || this.bus?.phase === "arrived" ? this.bus.target.name : this.bus?.attached ? this.world.nearestRoadName(this.position) : this.region.town,
       district: currentDistrict ?? (this.bus?.phase === "exited" || this.bus?.phase === "arrived" ? this.bus.target.district : this.region.id),
       nearStation: station ? { id: station.data.id, name: station.data.name, distance: distance(this.position,station.waiting) } : undefined,
     };
@@ -1704,11 +1766,14 @@ export class GameEngine {
     };
   }
   dispose() {
+    if (this.disposed) return;
     this.disposed = true;
     cancelAnimationFrame(this.frame);
     this.input.dispose();
     this.resize.disconnect();
     document.removeEventListener("visibilitychange", this.visibilityHandler);
+    this.renderer.domElement.removeEventListener("webglcontextlost", this.contextLossHandler);
+    this.renderer.domElement.removeEventListener("webglcontextrestored", this.contextRestoreHandler);
     this.audio.dispose();
     this.world.dispose();
     this.terminals.dispose();

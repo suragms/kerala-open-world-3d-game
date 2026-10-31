@@ -43,11 +43,13 @@ import {
   getAccuracyReport,
   loadBusPlan,
   toGeo,
+  dataUrl,
 } from "./data/geography";
 import {
   readAvatar,
   readSave,
   readSettings,
+  sanitizeSettings,
   writeAvatar,
   writeSave,
   writeSettings,
@@ -276,7 +278,8 @@ export default function App() {
     [notice, setNotice] = useState("");
   const engine = useRef<GameEngine | null>(null),
     noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
-    loadVersion = useRef(0);
+    loadVersion = useRef(0),
+    retryLoad = useRef<(() => void) | null>(null);
   const ml = settings.language === "ml";
   const inputState = useRef({ settings, screen, overlay });
   inputState.current = { settings, screen, overlay };
@@ -380,6 +383,7 @@ export default function App() {
   const start = async (region: Region, place?: Place, continuing = false) => {
     if ((engine.current?.bus?.attached || engine.current?.trainPassenger) && !continuing) { notify("Leave your transport at a stop before exploring another area. You can request a stop or use the bus Fast Journey."); return; }
     const version = ++loadVersion.current;
+    retryLoad.current = () => { void start(region, place, continuing); };
     setNotice("");
     clearTimeout(noticeTimer.current);
     setError("");
@@ -408,6 +412,7 @@ export default function App() {
           ? engine.current?.save()
           : undefined;
       const selectedAvatar = continuing && save ? save.avatar : avatar;
+      if (continuing && save?.controls) setSettings(sanitizeSettings(save.controls));
       if (save && !continuing)
         save = {
           ...save,
@@ -450,12 +455,14 @@ export default function App() {
       setSnapshot(null);
       writeAvatar(selectedAvatar);
       setLoading("");
+      retryLoad.current = null;
     } catch (e) {
+      if (version !== loadVersion.current) return;
       setLoading("");
       setError(
         e instanceof Error ? e.message : "This region could not be loaded.",
       );
-      engine.current?.setPaused(false);
+      engine.current?.setPaused(Boolean(inputState.current.overlay));
     }
   };
   const bookBus = async (service: BusService, type: BusType) => {
@@ -471,6 +478,7 @@ export default function App() {
       return;
     }
     const version = ++loadVersion.current;
+    retryLoad.current = () => { void bookBus(service, type); };
     setLoading("Preparing the sourced bus corridor…");
     try {
       const { plan, tile } = await loadBusPlan(service, geography, type);
@@ -479,7 +487,8 @@ export default function App() {
       const save = { ...before, area: tile.id, position: toLocal(coordinate, tile.origin) };
       setPayload({ region: game.region, tile, avatar: game.avatar, save, busPlan: plan, busStations: geography.busStations, boundaries: geography.boundaries });
       setOverlay(null); setSnapshot(null); setLoading("");
-    } catch (e) { setLoading(""); setError(e instanceof Error ? e.message : "The bus corridor could not load."); }
+      retryLoad.current = null;
+    } catch (e) { if (version !== loadVersion.current) return; setLoading(""); setError(e instanceof Error ? e.message : "The bus corridor could not load."); }
   };
   const action = useCallback(
     (name: string) => {
@@ -586,6 +595,7 @@ export default function App() {
             if (!geography || !saved) return;
             const r = geography.regions.find((r) => r.id === saved.region);
             if (r) void start(r, geography.places.find((p) => p.tile === saved.area), true);
+            else setError("This saved district is unavailable. Begin a new journey or restore a valid save.");
           }}
           onSelectDistrict={(id) => {
             setDistrict(id);
@@ -989,13 +999,13 @@ export default function App() {
                     © OpenStreetMap contributors · ODbL
                   </a>
                   <a
-                    href="/data/boundary-source.json"
+                    href={dataUrl("boundary-source.json")}
                     target="_blank"
                     rel="noreferrer"
                   >
                     geoBoundaries / Pathways Data · ODbL
                   </a>
-                  <a href="/data/regions.json" target="_blank" rel="noreferrer">
+                  <a href={dataUrl("regions.json")} target="_blank" rel="noreferrer">
                     Landmark source & accuracy register
                   </a>
                 </div>
@@ -1028,6 +1038,7 @@ export default function App() {
                 loadGeography()
                   .then(setGeography)
                   .catch((e) => setError(e.message));
+              else retryLoad.current?.();
             }}
           >
             Retry

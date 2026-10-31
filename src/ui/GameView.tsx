@@ -551,10 +551,12 @@ function BusJourneyHUD({ snapshot, action, walk, map }: { snapshot: Snapshot; ac
     {attached && !selecting && bus.phase !== "boarding" ? <div className="bus-buttons">
       <button onClick={() => action("lookAround")}>Look around</button>
       <button onClick={() => action("camera")}>Change camera</button>
-      <button aria-pressed={bus.requestStop} disabled={bus.phase === "arrived"} onClick={() => action("requestStop")}>{bus.requestStop ? "Stop requested" : "Get off at next stop"}</button>
+      <button aria-pressed={bus.requestStop} disabled={!["travelling", "closing"].includes(bus.phase)} onClick={() => action(bus.requestStop ? "cancelStopRequest" : "requestStop")}>{bus.requestStop ? "Cancel stop request" : "Get off at next stop"}</button>
+      {bus.acknowledgedStop ? <span role="status">Stop request acknowledged · {bus.acknowledgedStop}. The bus will depart after its station dwell.</span> : null}
       <button disabled={bus.phase === "arrived"} onClick={() => action("fastBus")}>Fast Journey</button>
       <button onClick={map}>View route</button>
       <button disabled={!bus.canExit} onClick={() => action("exitBus")}>Exit at stop</button>
+      <button disabled={!bus.canExit} onClick={() => action("recoverBusExit")}>Recover to safe checkpoint</button>
     </div> : null}
     <small>{bus.camera} · Original bus design · road routing, no real timetable</small>
   </section>;

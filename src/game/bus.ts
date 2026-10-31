@@ -4,6 +4,7 @@ import { distance, nearestOnSegment } from "./navigation";
 import { BUS_SPECS } from "./busSpecs";
 
 export const BUS_CAMERAS = ["Passenger seat", "Window view", "Exterior bus", "Forward view"] as const;
+export type BusPhase = "arriving" | "opening" | "waiting" | "boarding" | "select-seat" | "seated" | "closing" | "travelling" | "dwelling" | "arrived" | "exited";
 export interface RouteStop { name: string; point: Vec2; distance: number; district: string; }
 export function routeLengths(points: Vec2[]) {
   const cumulative = [0];
@@ -11,6 +12,8 @@ export function routeLengths(points: Vec2[]) {
   return cumulative;
 }
 export function sampleRoute(points: Vec2[], lengths: number[], metres: number, offset = 0) {
+  if (!points.length) throw new Error("Cannot sample an empty transport route.");
+  if (points.length === 1) return { ...points[0], yaw: 0, segment: 0 };
   const d = Math.max(0, Math.min(lengths.at(-1) ?? 0, metres));
   let lo = 1, hi = points.length - 1;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (lengths[mid] < d) lo = mid + 1; else hi = mid; }
@@ -21,7 +24,7 @@ export function sampleRoute(points: Vec2[], lengths: number[], metres: number, o
   const average = (u: Vec2,v: Vec2) => { const n = Math.hypot(u.x+v.x,u.z+v.z); return n > 0.001 ? {x:(u.x+v.x)/n,z:(u.z+v.z)/n} : v; };
   const start = i > 1 ? average(unit(points[i-2],a),edge) : edge;
   const end = i+1 < points.length ? average(edge,unit(b,points[i+1])) : edge;
-  const blend = Math.min(6,length/2);
+  const blend = Math.max(.001, Math.min(6,length/2));
   const nearStart = Math.max(0,1-t*length/blend), nearEnd = Math.max(0,1-(1-t)*length/blend);
   const tangent = { x: edge.x+(start.x-edge.x)*nearStart+(end.x-edge.x)*nearEnd,
     z: edge.z+(start.z-edge.z)*nearStart+(end.z-edge.z)*nearEnd };
@@ -48,14 +51,15 @@ export function validateBusGeometry(points: Vec2[], expectedDistance: number) {
 /** Deterministic passenger simulation. All advances are distance along sourced road geometry. */
 export class PassengerJourney {
   points: Vec2[]; lengths: number[]; stops: RouteStop[];
-  phase = "arriving";
+  phase: BusPhase = "arriving";
   door = 0; speed = 0; travelled = 0; seconds = 0; timer = 0;
   stopIndex = 0; seat: number | null = null; attached = false; requestStop = false;
+  acknowledgedStop: string | null = null;
   camera = 0; mode: "full" | "fast" = "full";
   occupied = new Set([1, 3, 6, 10, 13]);
-  private resumePhase = "travelling";
+  private resumePhase: BusPhase = "travelling";
   constructor(public plan: BusPlan, origin: [number, number], public dwellSeconds = 8) {
-    this.dwellSeconds = Math.max(6, Math.min(30, dwellSeconds));
+    this.dwellSeconds = Number.isFinite(dwellSeconds) ? Math.max(6, Math.min(30, dwellSeconds)) : 8;
     this.occupied = new Set([...this.occupied].filter(i => i < BUS_SPECS[plan.type].seats));
     this.points = (plan.route.drivingPoints ?? plan.route.points).map(p => toLocal(p, origin));
     this.lengths = routeLengths(this.points);
@@ -74,7 +78,7 @@ export class PassengerJourney {
   get target() { return this.stops[this.stopIndex]; }
   get canExit() { return this.attached && this.speed < 0.05 && this.door > 0.98 && ["select-seat", "seated", "dwelling", "arrived"].includes(this.phase); }
   canBoard(doorDistance: number) {
-    return !this.attached && this.phase === "waiting" && this.door > 0.98 && this.speed < 0.05 && doorDistance < 4;
+    return !this.attached && this.phase === "waiting" && this.door > 0.98 && this.speed < 0.05 && Number.isFinite(doorDistance) && doorDistance >= 0 && doorDistance < 4;
   }
   board(doorDistance: number) {
     if (!this.canBoard(doorDistance)) return false;
@@ -87,21 +91,28 @@ export class PassengerJourney {
     this.seat = index; this.phase = "seated"; return true;
   }
   depart() {
-    if (this.phase !== "seated" || this.seat === null) return false;
+    if (!this.attached || this.phase !== "seated" || this.seat === null) return false;
     this.phase = "closing"; this.resumePhase = "travelling"; this.stopIndex = 1; this.timer = 0; return true;
   }
   requestNextStop() {
-    if (!this.attached || this.phase === "arrived") return;
+    if (!this.attached || !["travelling", "closing"].includes(this.phase)) return false;
     this.requestStop = true;
+    return true;
+  }
+  cancelStopRequest() {
+    const requested = this.requestStop;
+    this.requestStop = false;
+    return requested;
   }
   exit() {
     if (!this.canExit) return false;
-    this.attached = false; this.phase = "exited"; return true;
+    this.attached = false; this.requestStop = false; this.phase = "exited"; return true;
   }
   /** Explicit fast travel, available only once safely seated. It never pretends to be continuous. */
   fastForward() {
     if (!this.attached || this.seat === null || !["travelling", "closing", "dwelling"].includes(this.phase)) return false;
     this.mode = "fast";
+    this.requestStop = false;
     this.seconds += Math.max(0, this.lengths.at(-1)! - this.travelled) / 11;
     this.travelled = this.lengths.at(-1)!; this.stopIndex = this.stops.length - 1;
     this.speed = 0; this.door = 0; this.phase = "opening"; this.resumePhase = "arrived"; this.timer = 0;
@@ -119,10 +130,13 @@ export class PassengerJourney {
     if (["opening", "waiting", "boarding", "select-seat", "seated", "dwelling", "arrived"].includes(this.phase)) this.door = Math.min(1, this.door + dt / 1.1);
     if (this.phase === "opening" && this.door >= 1) { this.phase = this.resumePhase; this.timer = 0; }
     if (this.phase === "boarding" && this.timer >= 1.2) { this.phase = "select-seat"; this.timer = 0; }
-    if (this.phase === "dwelling" && this.timer >= this.dwellSeconds && !this.requestStop) { this.stopIndex++; this.phase = "closing"; this.timer = 0; }
+    if (this.phase === "dwelling" && this.timer >= this.dwellSeconds) {
+      this.requestStop = false; this.acknowledgedStop = null;
+      this.stopIndex++; this.phase = "closing"; this.timer = 0;
+    }
     if (this.phase === "closing") {
       this.door = Math.max(0, this.door - dt / 1.1);
-      if (this.door === 0 && this.timer > 1.5) this.phase = "travelling";
+      if (this.door === 0 && this.timer > 1.5 && this.attached && this.seat !== null) this.phase = "travelling";
     }
     if (!["arriving", "travelling"].includes(this.phase)) { this.speed = 0; return; }
     const remaining = Math.max(0, this.target.distance - this.travelled);
@@ -135,6 +149,8 @@ export class PassengerJourney {
     this.speed += Math.max(-2.6 * dt, Math.min(1.15 * dt, targetSpeed - this.speed));
     this.travelled = Math.min(this.target.distance, this.travelled + Math.max(0, this.speed) * dt);
     if (remaining < 0.08 && this.speed < 0.7) {
+      if (this.requestStop) this.acknowledgedStop = this.target.name;
+      this.requestStop = false;
       this.travelled = this.target.distance; this.speed = 0; this.phase = "opening";
       this.resumePhase = this.stopIndex === 0 ? "waiting" : this.stopIndex === this.stops.length - 1 ? "arrived" : "dwelling";
       this.timer = 0;
@@ -157,6 +173,7 @@ export class PassengerJourney {
       nextStop: this.target.name, remaining: Math.max(0, total - this.travelled), total,
       seconds: this.seconds, progress: this.travelled / total, seated: this.seat !== null,
       seat: this.seat, occupied: [...this.occupied], requestStop: this.requestStop,
+      acknowledgedStop: this.acknowledgedStop,
       canBoard: this.canBoard(doorDistance), canExit: this.canExit, camera: BUS_CAMERAS[this.camera],
       route: this.plan.route.service.id, type: this.plan.type, passengers: this.occupied.size,
       mode: this.mode };

@@ -8,7 +8,7 @@ for kind,query in [('road','way["highway"~"motorway|trunk|primary"]["ref"~"NH.?6
   for e in raw['elements']:
    points=[[p['lon'],p['lat']] for p in e.get('geometry',[]) if p and 'lon'in p]
    if len(points)<2:continue
-   features.append({'id':e['id'],'kind':kind,'ref':e.get('tags',{}).get('ref',''),'name':e.get('tags',{}).get('name:en',e.get('tags',{}).get('name','')),'points':points})
+   features.append({'id':e['id'],'kind':kind,'ref':e.get('tags',{}).get('ref',''),'name':e.get('tags',{}).get('name:en',e.get('tags',{}).get('name','')),'points':points,'oneway':e.get('tags',{}).get('oneway','no') if kind=='road' else 'no'})
   print(kind,len(raw['elements']),flush=True)
  except Exception as e:print(kind,'unavailable',e,flush=True)
 ids={(f['id'],f['kind']) for f in features}

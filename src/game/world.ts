@@ -3,6 +3,7 @@ import { toLocal } from "../data/geography";
 import type { GeoFeature, Region, Settings, Tile, Vec2 } from "../types";
 import {
   bake,
+  bakeSteps,
   banana,
   box,
   broadleaf,
@@ -87,6 +88,14 @@ export class World {
   private disposedChunks = 0;
   private maxChunkMilliseconds = 0;
   private lastChunk = "";
+  private lastLookahead = "";
+  private building?: { key: string; group: THREE.Group; work: Generator<void | string>; cpu: number; stage: string };
+  private maxSliceMilliseconds = 0;
+  private completedCpu: number[] = [];
+  private cancelledChunks = 0;
+  private stageMilliseconds: Record<string,number> = {};
+  private terrainMilliseconds = 0;
+  private maxTerrainMilliseconds = 0;
   private queue: string[] = [];
   private wanted = new Set<string>();
   private ground: THREE.Mesh;
@@ -243,6 +252,7 @@ export class World {
       this.height(this.landmarkPosition.x, this.landmarkPosition.z),
       this.height(this.landmarkPosition.x, this.landmarkPosition.z) + 24,
     );
+    const terrainBegan=performance.now();
     const gridStep=tile.terrain ? tile.terrain.step/(settings.quality === "low" ? 1 : settings.quality === "medium" ? 2 : 4) : 5200/256;
     const halfExtent=Math.ceil(2600/gridStep)*gridStep, divisions=Math.round(halfExtent*2/gridStep);
     const geometry = new THREE.PlaneGeometry(halfExtent*2, halfExtent*2, divisions, divisions);
@@ -275,6 +285,7 @@ export class World {
     this.ground = new THREE.Mesh(geometry, groundMat);
     this.ground.receiveShadow = true;
     this.root.add(this.ground);
+    this.terrainMilliseconds=performance.now()-terrainBegan; this.maxTerrainMilliseconds=this.terrainMilliseconds;
     this.landmark = region.asset === "bus-terminal" ? new THREE.Group() : landmarkModel(region.theme, region.landmark);
     this.landmark.position.set(
       this.landmarkPosition.x,
@@ -544,10 +555,8 @@ export class World {
     bake(g);
     this.root.add(g);
   }
-  private createChunk(key: string) {
-    const began = performance.now();
-    const [cx, cz] = key.split(",").map(Number),
-      group = new THREE.Group();
+  private *createChunk(key: string, group: THREE.Group): Generator<void | string> {
+    const [cx, cz] = key.split(",").map(Number);
     group.name = `Geographic chunk ${key}`;
     const lights: Vec2[] = [];
     const stops: Vec2[] = [];
@@ -555,6 +564,7 @@ export class World {
     const features = this.featureChunks.get(key) ?? [];
     for (const f of features) {
       const t = f.source.tags;
+      yield t.highway ? "roads" : t.building ? "buildings" : t.railway ? "rail" : "other-features";
       if (t.highway && f.source.type !== "node") {
         const width = roadWidths[t.highway] ?? 5;
         if (width >= 6)
@@ -770,6 +780,7 @@ export class World {
           ? 14
           : 23;
     for (let i = 0; i < count; i++) {
+      yield "vegetation";
       const p = { x: cx * SIZE + rng() * SIZE, z: cz * SIZE + rng() * SIZE };
       if (
         distance(p, this.landmarkPosition) < 50 ||
@@ -803,6 +814,7 @@ export class World {
     // Low-cost grass tufts add close-ground detail without alpha-heavy foliage.
     if (this.settings.quality !== "low")
       for (let i = 0; i < 45; i++) {
+        yield "vegetation";
         const x = cx * SIZE + rng() * SIZE,
           z = cz * SIZE + rng() * SIZE,
           p = { x, z };
@@ -827,33 +839,38 @@ export class World {
       }
       if(vertices.length){const geometry=new THREE.BufferGeometry();geometry.setAttribute("position",new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();group.add(new THREE.Mesh(geometry,this.waterMaterial));}
     }
-    bake(group);
+    yield "bake-and-instancing";
+    yield* bakeSteps(group);
     this.root.add(group);
     this.streetlights.set(key, lights);
     this.chunks.set(key, group);
     this.createdChunks++;
     this.chunkBusStops.set(key,stops);
     this.busStopPositions = [...this.chunkBusStops.values()].flat();
-    this.maxChunkMilliseconds = Math.max(this.maxChunkMilliseconds,performance.now()-began);
+
   }
   updateStreaming(position: Vec2, immediate = false, lookahead?: Vec2) {
     if (this.tile.id.startsWith("corridor-")) {
       const block=this.tile.terrain ? this.tile.terrain.step*4 : 512;
       const x=Math.floor(position.x/block)*block, z=Math.floor(position.z/block)*block;
       if (x!==this.groundBase.x || z!==this.groundBase.z) {
+        const terrainBegan=performance.now();
         this.groundBase={x,z}; this.ground.position.set(x,0,z);
         if (this.tile.terrain) {
           const p=this.ground.geometry.getAttribute("position");
           for(let i=0;i<p.count;i++)p.setY(i,this.height(p.getX(i)+x,p.getZ(i)+z));
           p.needsUpdate=true;this.ground.geometry.computeVertexNormals();this.ground.geometry.computeBoundingSphere();
         }
+        const cost=performance.now()-terrainBegan;this.terrainMilliseconds+=cost;this.maxTerrainMilliseconds=Math.max(this.maxTerrainMilliseconds,cost);
       }
     }
     const cx = Math.floor(position.x / SIZE),
       cz = Math.floor(position.z / SIZE),
       key = `${cx},${cz}`,
       range = this.settings.quality === "low" ? 1 : 2;
-    if (key !== this.lastChunk || immediate) {
+    const aheadKey = lookahead ? `${Math.floor(lookahead.x / SIZE)},${Math.floor(lookahead.z / SIZE)}` : "";
+    if (key !== this.lastChunk || aheadKey !== this.lastLookahead || immediate) {
+      this.lastLookahead = aheadKey;
       this.lastChunk = key;
       this.wanted.clear();
       for (let dx = -range; dx <= range; dx++)
@@ -865,6 +882,7 @@ export class World {
         const ax = Math.floor(lookahead.x / SIZE), az = Math.floor(lookahead.z / SIZE);
         for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) this.wanted.add(`${ax+x},${az+z}`);
       }
+      if (this.building && !this.wanted.has(this.building.key)) this.cancelBuild();
       for (const [k, g] of this.chunks)
         if (!this.wanted.has(k)) {
           disposeGroup(g);
@@ -875,21 +893,48 @@ export class World {
           this.disposedChunks++;
         }
       this.queue = [...this.wanted]
-        .filter((k) => !this.chunks.has(k))
+        .filter((k) => !this.chunks.has(k) && k !== this.building?.key)
         .sort((a, b) => {
           const [ax, az] = a.split(",").map(Number),
             [bx, bz] = b.split(",").map(Number);
           return Math.hypot(ax - cx, az - cz) - Math.hypot(bx - cx, bz - cz);
         });
     }
-    const batch = immediate ? 5 : 1;
-    for (let i = 0; i < batch && this.queue.length; i++)
-      this.createChunk(this.queue.shift()!);
+    // Soft time budget with an operation cap; single geometry operations cannot be preempted.
+    const began = performance.now(), budget = immediate ? 8 : 4;
+    for (let operations = 0; operations < 256 && performance.now() - began < budget; operations++) {
+      if (!this.building) {
+        const next = this.queue.shift(); if (!next) break;
+        if (this.chunks.has(next) || !this.wanted.has(next)) continue;
+        const group = new THREE.Group();
+        this.building = { key: next, group, work: this.createChunk(next,group), cpu: 0, stage: "preparation" };
+      }
+      const build = this.building, stepStart = performance.now();
+      const result = build.work.next(), cost = performance.now() - stepStart; build.cpu += cost;
+      this.stageMilliseconds[build.stage]=(this.stageMilliseconds[build.stage]??0)+cost;
+      if (typeof result.value === "string") build.stage=result.value;
+      if (result.done) {
+        this.maxChunkMilliseconds = Math.max(this.maxChunkMilliseconds,build.cpu);
+        this.completedCpu.push(build.cpu); if (this.completedCpu.length > 256) this.completedCpu.shift();
+        this.building = undefined;
+      }
+    }
+    this.maxSliceMilliseconds = Math.max(this.maxSliceMilliseconds,performance.now()-began);
   }
   nearestRoadName(position: Vec2) {
     return this.network.nearest(position)?.road.name ?? this.region.town;
   }
-  streamingStats() { return { created: this.createdChunks, disposed: this.disposedChunks, queued: this.queue.length, maxChunkMilliseconds: Math.round(this.maxChunkMilliseconds * 100)/100 }; }
+  private cancelBuild() {
+    if (!this.building) return;
+    this.building.work.return(undefined); disposeGroup(this.building.group); this.building = undefined; this.cancelledChunks++;
+  }
+  streamingStats() { return { created: this.createdChunks, disposed: this.disposedChunks, queued: this.queue.length + Number(Boolean(this.building)),
+    stageMilliseconds: { ...this.stageMilliseconds }, terrainMilliseconds:this.terrainMilliseconds, maxTerrainMilliseconds:this.maxTerrainMilliseconds,
+    collisionIndexMilliseconds:this.collisions.indexMilliseconds,
+    cancelled: this.cancelledChunks, wanted: [...this.wanted], building: this.building?.key,
+    maxChunkMilliseconds: Math.round(this.maxChunkMilliseconds * 100)/100,
+    maxSliceMilliseconds: Math.round(this.maxSliceMilliseconds * 100)/100,
+    meanChunkMilliseconds: this.completedCpu.length ? this.completedCpu.reduce((a,b)=>a+b,0)/this.completedCpu.length : 0 }; }
   groundHit(ray: THREE.Raycaster) {
     const hit = ray.intersectObject(this.ground)[0];
     return hit ? { x: hit.point.x, z: hit.point.z } : undefined;
@@ -898,6 +943,7 @@ export class World {
     const changed = settings.quality !== this.settings.quality;
     this.settings = settings;
     if (changed) {
+      this.cancelBuild(); this.queue = []; this.wanted.clear();
       for (const g of this.chunks.values()) disposeGroup(g);
       this.chunks.clear();
       this.streetlights.clear();
@@ -906,6 +952,7 @@ export class World {
     }
   }
   dispose() {
+    this.cancelBuild(); this.queue = []; this.wanted.clear(); this.streetlights.clear();
     disposeGroup(this.root);
     this.waterMaterial.dispose();
     this.chunks.clear();

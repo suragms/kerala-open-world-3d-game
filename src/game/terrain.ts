@@ -1,7 +1,8 @@
 import type { TerrainGrid } from "../types";
 
 export function validTerrain(grid: TerrainGrid) {
-  return Number.isInteger(grid.width) && grid.width >= 2 && Number.isInteger(grid.height) && grid.height >= 2
+  return Boolean(grid && Array.isArray(grid.values) && Array.isArray(grid.origin) && grid.origin.length === 2 && grid.origin.every(Number.isFinite)
+    && Number.isFinite(grid.minX) && Number.isFinite(grid.minZ)) && Number.isInteger(grid.width) && grid.width >= 2 && Number.isInteger(grid.height) && grid.height >= 2
     && grid.width * grid.height === grid.values.length && grid.values.length < 2_000_000
     && Number.isFinite(grid.step) && grid.step > 0 && Number.isFinite(grid.scale) && grid.scale > 0
     && grid.values.every(v => Number.isFinite(v) && v / grid.scale >= -500 && v / grid.scale <= 4000);

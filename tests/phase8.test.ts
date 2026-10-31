@@ -122,17 +122,36 @@ test("Full journey remains continuous along the road and arrives without fast tr
   assert.equal(bus.phase, "arrived"); assert.ok(bus.canExit); assert.equal(bus.mode, "full");
   assert.ok(bus.record().completed); assert.ok(bus.exit()); assert.equal(bus.attached, false);
 });
-test("Requested intermediate stops hold the doors for safe passenger disembarkation", () => {
+test("Requested intermediate stops acknowledge, allow safe exit and depart if the passenger stays", () => {
   const bus = create();
   const midpoint = sampleRoute(bus.points, bus.lengths, 400);
   bus.stops.splice(1, 0, { name: "Deterministic test stop", point: midpoint, distance: 400, district: "thrissur" });
   board(bus); bus.requestNextStop(); wait(bus, () => bus.phase === "dwelling");
-  bus.update(30); assert.equal(bus.phase, "dwelling"); assert.equal(bus.speed, 0); assert.equal(bus.door, 1); assert.ok(bus.exit()); assert.equal(bus.record().completed, false);
+  assert.equal(bus.requestStop,false); assert.equal(bus.acknowledgedStop,"Deterministic test stop");
+  assert.equal(bus.speed,0); assert.ok(bus.canExit);
+  assert.equal(bus.exit(),true); assert.equal(bus.record().completed,false);
+  const continuing=create(); continuing.stops.splice(1,0,{name:"Continue stop",point:midpoint,distance:400,district:"thrissur"});
+  board(continuing); continuing.requestNextStop(); wait(continuing,()=>continuing.phase==="dwelling");
+  continuing.update(12); assert.equal(continuing.phase,"travelling"); assert.equal(continuing.stopIndex,2); assert.equal(continuing.door,0); assert.ok(continuing.speed>0);
 });
 test("An unrequested intermediate stop dwells and resumes without open-door driving", () => {
   const bus = create(), point = sampleRoute(bus.points, bus.lengths, 350);
   bus.stops.splice(1,0,{name:"Test dwell stop", point, distance:350, district:"thrissur"});
   board(bus); wait(bus, () => bus.phase === "dwelling"); bus.update(7); assert.equal(bus.phase,"dwelling"); bus.update(4); assert.equal(bus.phase,"travelling"); assert.equal(bus.door,0);
+});
+test("Repeated and cancelled bus stop requests cannot lock dwell or restart a finished journey",()=>{
+  const bus=create();
+  for(const d of [300,700])bus.stops.splice(bus.stops.length-1,0,{name:`Stop ${d}`,point:sampleRoute(bus.points,bus.lengths,d),distance:d,district:"thrissur"});
+  bus.stops.sort((a,b)=>a.distance-b.distance);
+  assert.equal(bus.requestNextStop(),false);board(bus);
+  assert.ok(bus.requestNextStop());assert.ok(bus.cancelStopRequest());assert.equal(bus.requestStop,false);
+  for(let i=0;i<2;i++){
+    assert.ok(bus.requestNextStop());assert.ok(bus.requestNextStop());wait(bus,()=>bus.phase==="dwelling");
+    assert.equal(bus.requestStop,false);assert.ok(bus.acknowledgedStop);assert.equal(bus.requestNextStop(),false);
+    bus.update(bus.dwellSeconds+2);assert.equal(bus.phase,"travelling");assert.equal(bus.door,0);
+  }
+  wait(bus,()=>bus.phase==="arrived");assert.equal(bus.depart(),false);assert.equal(bus.fastForward(),false);assert.equal(bus.requestNextStop(),false);
+  assert.ok(bus.exit());assert.equal(bus.exit(),false);assert.equal(bus.board(1),false);
 });
 test("Bus brakes for obstacles and simulated red signals", () => {
   const bus = create(); board(bus); bus.update(20); assert.ok(bus.speed > 2);
@@ -150,6 +169,11 @@ test("All four bus cameras have distinct user-facing modes", () => {
 test("Route sampling clamps distance and keeps the left-hand lane", () => {
   const pts=[{x:0,z:0},{x:0,z:-100}], lengths=routeLengths(pts);
   const p=sampleRoute(pts,lengths,50,-1.6); assert.equal(p.x,-1.6); assert.equal(p.z,-50); assert.equal(sampleRoute(pts,lengths,999).z,-100);
+});
+test("Repeated route vertices and single-point probes never produce NaN poses",()=>{
+  const points=[{x:0,z:0},{x:0,z:0},{x:0,z:-10}];
+  for(const d of [0,.001,10])assert.ok(Object.values(sampleRoute(points,routeLengths(points),d)).every(Number.isFinite));
+  assert.ok(Object.values(sampleRoute([{x:1,z:2}],[0],0)).every(Number.isFinite));
 });
 test("A bus lane and heading stay continuous across a road corner", () => {
   const points=[{x:0,z:0},{x:0,z:-30},{x:30,z:-30}], lengths=routeLengths(points);

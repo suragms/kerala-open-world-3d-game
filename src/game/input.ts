@@ -12,7 +12,10 @@ export class InputManager {
   device = "keyboard";
   context: InputContext = "ON_FOOT";
   neutral = 0;
-  private previousClick = 0;
+  private previousClick = -Infinity;
+  private pointer?: number;
+  private heldSince = 0;
+  private callbacks: { release?: (interrupted: boolean) => void };
   private cleanups: (() => void)[] = [];
   constructor(
     public canvas: HTMLCanvasElement,
@@ -24,8 +27,10 @@ export class InputManager {
       orbit: (dx: number, dy: number) => void;
       zoom: (delta: number) => void;
       track?: (x: number, y: number) => void;
+      release?: (interrupted: boolean) => void;
     },
   ) {
+    this.callbacks = callbacks;
     const listen = <K extends keyof WindowEventMap>(
       type: K,
       handler: (event: WindowEventMap[K]) => void,
@@ -50,7 +55,7 @@ export class InputManager {
           (k) => this.settings.bindings[k] === e.code,
         );
         if (action) callbacks.action(action);
-        if (e.code === "Escape") callbacks.action("pause");
+        if (e.code === "Escape" && action !== "pause") callbacks.action("pause");
       }
     });
     listen("keyup", (e) => {
@@ -67,6 +72,7 @@ export class InputManager {
       callbacks.track?.(e.clientX, e.clientY);
       if (e.button === 0) {
         this.leftHeld = true;
+        this.heldSince = performance.now();
         if (!this.driving && this.settings.movement === "mouse") {
           if (performance.now() - this.previousClick < 320) callbacks.action("sprintDestination");
           this.previousClick = performance.now();
@@ -75,11 +81,16 @@ export class InputManager {
       }
       if (e.button === 2) {
         this.rightHeld = true;
-        if (!this.driving) this.leftHeld = false;
+        if (!this.driving && this.leftHeld) { callbacks.release?.(true); this.leftHeld = false; }
       }
-      canvas.setPointerCapture(e.pointerId);
+      this.pointer = e.pointerId;
+      try { canvas.setPointerCapture(e.pointerId); } catch { this.clear(); }
     };
     const move = (e: PointerEvent) => {
+      if (this.pointer === e.pointerId && typeof e.buttons === "number") {
+        if (this.leftHeld && !(e.buttons & 1)) callbacks.release?.(performance.now() - this.heldSince >= 250);
+        this.leftHeld = Boolean(e.buttons & 1); this.rightHeld = Boolean(e.buttons & 2);
+      }
       const rect = canvas.getBoundingClientRect();
       if (active()) this.device = "mouse";
       this.mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
@@ -95,14 +106,21 @@ export class InputManager {
         callbacks.orbit(e.movementX, e.movementY);
     };
     const up = (e: PointerEvent) => {
-      if (e.button === 0) this.leftHeld = false;
+      if (this.pointer !== undefined && e.pointerId !== this.pointer) return;
+      if (e.button === 0 && this.leftHeld) {
+        callbacks.release?.(performance.now() - this.heldSince >= 250);
+        this.leftHeld = false;
+      }
       if (e.button === 2) this.rightHeld = false;
+      if (!this.leftHeld && !this.rightHeld) this.releasePointer();
     };
     const context = (e: MouseEvent) => e.preventDefault();
     const cancel = () => this.clear();
     const release = () => {
+      if (this.leftHeld) callbacks.release?.(true);
       this.leftHeld = false;
       this.rightHeld = false;
+      this.pointer = undefined;
     };
     const wheel = (e: WheelEvent) => {
       if (active()) {
@@ -117,6 +135,9 @@ export class InputManager {
     canvas.addEventListener("lostpointercapture", release);
     canvas.addEventListener("contextmenu", context);
     canvas.addEventListener("wheel", wheel, { passive: false });
+    const visibility = () => { if (document.hidden) this.clear(); };
+    // InputManager is also exercised without a document in deterministic unit tests.
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", visibility);
     this.cleanups.push(() => {
       canvas.removeEventListener("pointerdown", down);
       canvas.removeEventListener("pointermove", move);
@@ -125,6 +146,7 @@ export class InputManager {
       canvas.removeEventListener("lostpointercapture", release);
       canvas.removeEventListener("contextmenu", context);
       canvas.removeEventListener("wheel", wheel);
+      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", visibility);
     });
   }
   axis(
@@ -133,7 +155,7 @@ export class InputManager {
     alternateNegative: string,
     alternatePositive: string,
   ) {
-    if (!this.active() || this.context === "BUS_PASSENGER") return 0;
+    if (!this.active() || !["ON_FOOT", "IN_VEHICLE"].includes(this.context)) return 0;
     const analog = positive === "forward" ? controller.frame.moveY : controller.frame.moveX;
     if (Math.abs(analog) > 0.01) this.device = "gamepad";
     const keyboard = (
@@ -158,10 +180,18 @@ export class InputManager {
     this.mouseDriveDirection = available ? direction : 0;
   }
   clear() {
+    if (this.leftHeld) this.callbacks.release?.(true);
     this.keys.clear();
     this.leftHeld = false;
     this.rightHeld = false;
     this.mouseDriveDirection = 0;
+    this.lookAround = false;
+    this.previousClick = -Infinity;
+    this.releasePointer();
+  }
+  private releasePointer() {
+    const id = this.pointer; this.pointer = undefined;
+    if (id !== undefined && this.canvas.hasPointerCapture?.(id)) this.canvas.releasePointerCapture(id);
   }
   dispose() {
     this.cleanups.forEach((fn) => fn());
