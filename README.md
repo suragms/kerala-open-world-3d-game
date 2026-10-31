@@ -9,7 +9,7 @@ The visuals are original, stylized game assets. Landmark and terminal architectu
 Use Node.js 22.12 or newer and a WebGL2 browser.
 
 ```powershell
-npm install
+npm ci
 npm run dev -- --port 5173
 ```
 
@@ -20,9 +20,12 @@ npm run build
 npm test
 npm run data:validate
 npm run test:browser
+npm run test:production
 ```
 
-The browser suite expects the development server on port 5173. It starts each workflow through the normal character-selection interface. Long bus and rail checks advance the normal simulation with a development-only deterministic clock; those checks are not real-time FPS benchmarks.
+Install the pinned browser once with `npm run test:browser:install`. The cross-platform browser suite starts its own local server on an available port, waits for readiness, and closes it afterward. Each workflow starts through the character-selection interface in an isolated browser context. Failed assertions, browser errors and network failures fail the run; screenshots, HTML, JSON and failure traces are saved under `output/playwright/phase9/`.
+
+Use `BROWSER_CHECKS` (a comma-separated list) to select workflows. The legacy PowerShell scripts delegate to the same runner. Long bus and rail checks advance the normal simulation with a development-only deterministic clock; those checks are not real-time FPS benchmarks. `performance-long` measures actual frame intervals during moving urban, rural, hill and active bus scenes. `npm run test:production` builds and tests a subdirectory deployment. CI runs compilation, units, geography, production build and browser smoke tests and retains diagnostic artifacts.
 
 ## Controls
 
@@ -41,7 +44,7 @@ Settings includes keyboard and controller remapping, analog dead zones, steering
 
 ## Passenger journeys
 
-Walk to a departure station, choose a simulated service, wait for its bus to approach and stop, walk to the passenger door, board and choose a free seat. Full Journey follows a continuous road track with intermediate stops. Requesting the next stop holds the stopped bus for a safe exit. Fast Journey has an explicit transition and records the skipped trip separately.
+Walk to a departure station, choose a simulated service, wait for its bus to approach and stop, walk to the passenger door, board and choose a free seat. Full Journey follows a continuous road track with intermediate stops. Requesting the next stop acknowledges the request on arrival and opens the doors for the configured station dwell. Stay seated to continue automatically; cancel a pending request with its HUD button. Departure waits for closed doors. If a curbside exit is blocked, continue to another stop or use the explicit safe-checkpoint recovery control. Fast Journey has an explicit transition and records the skipped trip separately.
 
 Imported corridors:
 
@@ -59,6 +62,8 @@ Local train shuttles offer passenger, window and exterior cameras on supported i
 
 ## Data and verification
 
+- [Phase 9 bug fixes and verification](PHASE9_BUG_FIX_REPORT.md)
+- [Generated artifact and source-cache policy](output/ARTIFACT_POLICY.md)
 - [Phase 8 implementation and verification record](PHASE8_IMPLEMENTATION_REPORT.md)
 - [Geographic validation](public/data/validation-report.json)
 - [Bus route audit](public/data/bus-route-audit.json)
@@ -66,6 +71,6 @@ Local train shuttles offer passenger, window and exterior cameras on supported i
 - [Attribution and source limitations](public/data/NOTICE.md)
 - [Historical baseline report](VERIFIED_IMPLEMENTATION_REPORT.md)
 
-To rebuild bus driving tracks after reimporting source roads, run `npm run data:bus-tracks` before validation. The reproducible terminal, corridor scenery and elevation importers are in `scripts/`; raw downloads are cached in `output/phase8-source/`. Original geographic coordinates remain intact alongside derived driving tracks.
+To rebuild bus driving tracks after reimporting source roads, run `npm run data:bus-tracks` and `npm run data:routing-corridors` before validation. The second command adds the five existing attributed driving corridors to the road-only state graph; it preserves original coordinates and all railway geometry. Incomplete railway extracts are reported as unavailable routes, with no road fallback. The reproducible terminal, corridor scenery and elevation importers are in `scripts/`; raw downloads are cached in `output/phase8-source/`. Original geographic coordinates remain intact alongside derived driving tracks.
 
 Saves use version 2 with version 1 migration. An ongoing public-transport trip resumes on foot at its last safe checkpoint. Manual saves and 30-second autosaves include avatar, controls, camera, discoveries and bus history. Browser storage can be unavailable or cleared.
