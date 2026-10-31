@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS } from "../src/types";
 test("Explicit blocked-exit recovery avoids a vehicle that occupies the saved checkpoint",()=>{
   // Exercise the engine transition without constructing WebGL or a browser.
   const game=Object.create(GameEngine.prototype) as any,collisions=new CollisionWorld();
-  const trafficRoot=new THREE.Group();trafficRoot.position.set(-8,0,0);
+  const trafficRoot=new THREE.Group();trafficRoot.position.set(-8,0,0);trafficRoot.visible=false;
   const bus={attached:true,phase:"arrived",pose:{x:0,z:0,yaw:0},plan:{type:"public"},target:{name:"Test stop",district:"thrissur"},
     get canExit(){return this.attached;},exit(){this.attached=false;this.phase="exited";return true;},
     record:()=>({route:"test",to:"Test stop",from:"Origin",distance:100,seconds:10,completed:true,mode:"full",completedAt:"2026-10-31"})};

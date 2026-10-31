@@ -1019,7 +1019,7 @@ export class GameEngine {
     return curbsideExit(this.world.collisions, { center: pose, yaw: pose.yaw, halfWidth: 1.35,
       halfLength: BUS_SPECS[this.bus.plan.type].length / 2 + .1 }, 3.5 * busScale(this.bus.plan.type),
       this.player.dimensions.radius + .12, (x,z) => this.world.height(x,z),
-      this.traffic.agents.filter(a => a.model.root.visible).map(a => ({ center: a.model.root.position,
+      this.traffic.agents.map(a => ({ center: a.model.root.position,
         yaw: -a.model.root.rotation.y, ...vehicleDimensions(a.model.kind) })));
   }
   private exitBus(recover = false) {
@@ -1033,7 +1033,7 @@ export class GameEngine {
       if (checkpoint?.area === this.world.tile.id) {
         const probe = this.world.collisions.withAdditionalBoxes([{ center: pose, yaw: pose.yaw,
           halfWidth: 1.35, halfLength: BUS_SPECS[this.bus.plan.type].length / 2 + .1 },
-          ...this.traffic.agents.filter(a => a.model.root.visible).map(a => ({ center: a.model.root.position,
+          ...this.traffic.agents.map(a => ({ center: a.model.root.position,
             yaw: -a.model.root.rotation.y, ...vehicleDimensions(a.model.kind) }))]);
         point = probe.closestValid(checkpoint.position, this.player.dimensions.radius + .12);
         recovered = Boolean(point);
