@@ -1,0 +1,33 @@
+name: Stability and geographic regression
+on:
+  pull_request:
+  push:
+    branches: [main, master, 'fix/**', 'codex/**']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          cache: npm
+      - run: npm ci
+      - run: npx tsc -b
+      - run: npm test
+      - run: npm run data:validate
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+        env:
+          BROWSER_CHECKS: mouse-driving,gamepad,districts,phase8,bus-stop,rail,bus-full,phase9,loading-recovery
+      - run: npm run test:production
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-diagnostics
+          path: output/playwright/phase9*/
+          retention-days: 14

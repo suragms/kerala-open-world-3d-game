@@ -28,6 +28,16 @@ async (page) => {
     const diag = await page.evaluate(() => window.__KOW__.diagnostics());
     if (!Number.isFinite(state.position.x) || diag.roads < 1 || diag.blocked)
       throw new Error(`Invalid world in ${region.id}`);
+    const canvas=page.locator('.game-canvas canvas');await canvas.focus();
+    let moved=false;
+    for(const key of ['ArrowRight','ArrowLeft','ArrowDown']){
+      const from=await page.evaluate(()=>window.__KOW__.snapshot().position);
+      await page.keyboard.down(key);await page.waitForTimeout(350);await page.keyboard.up(key);await page.waitForTimeout(120);
+      const after=await page.evaluate(()=>window.__KOW__.snapshot().position);
+      if(await page.evaluate(()=>window.__KOW__.diagnostics().blocked))throw new Error(`Movement entered an obstacle in ${region.id}`);
+      moved ||= Math.hypot(after.x-from.x,after.z-from.z)>.25;if(moved)break;
+    }
+    if(!moved)throw new Error(`No tested keyboard direction moved in ${region.id}`);
     await page.screenshot({
       path: `output/playwright/phase8-suite/district-${region.id}.png`,
     });
@@ -40,6 +50,7 @@ async (page) => {
       traffic: state.traffic,
       pedestrians: state.pedestrians,
       position: state.position,
+      moved,
     });
   }
   return { districts: results, errors };
