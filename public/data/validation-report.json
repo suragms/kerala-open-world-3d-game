@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T14:12:07.683Z",
+  "generatedAt": "2026-10-31T13:33:44.310Z",
   "boundaryEdgeCases": [
     {
       "lon": 76.58920334999999,
@@ -142,7 +142,8 @@
       "terminalSource": "https://www.openstreetmap.org/way/1303676221",
       "verification": "source-and-district-checked",
       "asset": "original-procedural-exterior",
-      "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+      "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+      "fidelity": "C"
     },
     {
       "id": "osm-85000933",
@@ -160,7 +161,8 @@
       "terminalSource": "https://www.openstreetmap.org/way/254158852",
       "verification": "source-and-district-checked",
       "asset": "original-procedural-exterior",
-      "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+      "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+      "fidelity": "C"
     },
     {
       "id": "osm-254099650",
@@ -178,7 +180,8 @@
       "terminalSource": "https://www.openstreetmap.org/way/452201953",
       "verification": "source-and-district-checked",
       "asset": "original-procedural-exterior",
-      "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+      "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+      "fidelity": "C"
     },
     {
       "id": "osm-805245624",
@@ -196,11 +199,56 @@
       "terminalSource": "https://www.openstreetmap.org/way/392012106",
       "verification": "source-and-district-checked",
       "asset": "original-procedural-exterior",
-      "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+      "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+      "fidelity": "C"
     }
   ],
   "stations": 181,
   "excluded": [],
+  "busStations": 59,
+  "busDistricts": 14,
+  "busRoutes": [
+    {
+      "id": "thrissur-guruvayur",
+      "metres": 26327.4,
+      "vertices": 914,
+      "source": "https://router.project-osrm.org/route/v1/driving/76.2105222117647,10.51768865882353;76.03760736538462,10.595730026923077?overview=full&geometries=geojson&steps=true&annotations=nodes",
+      "serviceStatus": "Simulated; not an operational timetable",
+      "surveyStatus": "OSM driving profile; bus access and elevation not independently surveyed"
+    },
+    {
+      "id": "ernakulam-aluva",
+      "metres": 18125.4,
+      "vertices": 533,
+      "source": "https://router.project-osrm.org/route/v1/driving/76.3217772,9.9685632;76.35091999375,10.1083813?overview=full&geometries=geojson&steps=true&annotations=nodes",
+      "serviceStatus": "Simulated; not an operational timetable",
+      "surveyStatus": "OSM driving profile; bus access and elevation not independently surveyed"
+    },
+    {
+      "id": "thrissur-ernakulam",
+      "metres": 76571.6,
+      "vertices": 2890,
+      "source": "https://router.project-osrm.org/route/v1/driving/76.2105222117647,10.51768865882353;76.28902620666666,9.977291946666666?overview=full&geometries=geojson&steps=true&annotations=nodes",
+      "serviceStatus": "Simulated; not an operational timetable",
+      "surveyStatus": "OSM driving profile; bus access and elevation not independently surveyed"
+    },
+    {
+      "id": "kozhikode-kannur",
+      "metres": 92394.9,
+      "vertices": 2533,
+      "source": "https://router.project-osrm.org/route/v1/driving/75.78240502,11.25943574;75.3745361,11.875269244444445?overview=full&geometries=geojson&steps=true&annotations=nodes",
+      "serviceStatus": "Simulated; not an operational timetable",
+      "surveyStatus": "OSM driving profile; bus access and elevation not independently surveyed"
+    },
+    {
+      "id": "kottayam-ernakulam",
+      "metres": 66893.9,
+      "vertices": 2437,
+      "source": "https://router.project-osrm.org/route/v1/driving/76.523438,9.5858048;76.28902620666666,9.977291946666666?overview=full&geometries=geojson&steps=true&annotations=nodes",
+      "serviceStatus": "Simulated; not an operational timetable",
+      "surveyStatus": "OSM driving profile; bus access and elevation not independently surveyed"
+    }
+  ],
   "coverage": [
     {
       "district": "thiruvananthapuram",

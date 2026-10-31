@@ -1,0 +1,62 @@
+﻿[
+    {
+        "passed":  true,
+        "check":  "controls"
+    },
+    {
+        "passed":  true,
+        "check":  "mouse-driving"
+    },
+    {
+        "passed":  true,
+        "check":  "gamepad"
+    },
+    {
+        "passed":  true,
+        "check":  "districts"
+    },
+    {
+        "passed":  true,
+        "check":  "transport"
+    },
+    {
+        "passed":  true,
+        "check":  "settings"
+    },
+    {
+        "passed":  true,
+        "check":  "character-movement"
+    },
+    {
+        "passed":  true,
+        "check":  "movement-edges"
+    },
+    {
+        "passed":  true,
+        "check":  "performance"
+    },
+    {
+        "passed":  true,
+        "check":  "final-review"
+    },
+    {
+        "passed":  true,
+        "check":  "phase8"
+    },
+    {
+        "passed":  true,
+        "check":  "bus-stop"
+    },
+    {
+        "passed":  true,
+        "check":  "rail"
+    },
+    {
+        "passed":  true,
+        "check":  "bus-full"
+    },
+    {
+        "passed":  true,
+        "check":  "bus-interdistrict"
+    }
+]

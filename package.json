@@ -8,8 +8,10 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "tsx --test tests/*.test.ts",
+    "test:browser": "powershell -NoProfile -File scripts/browser-suite.ps1",
     "data:import": "python scripts/import_geography.py",
-    "data:validate": "tsx scripts/validate-geography.ts"
+    "data:validate": "tsx scripts/validate-geography.ts && tsx scripts/audit-bus-routes.ts",
+    "data:bus-tracks": "tsx scripts/prepare-bus-tracks.ts"
   },
   "dependencies": {
     "react": "^19.2.0",

@@ -143,7 +143,7 @@ async (page) => {
   const footYaw=(await controls()).cameraYaw; await page.mouse.move(800,400); await page.mouse.down({button:'right'}); await page.mouse.move(980,400,{steps:8}); await page.mouse.up({button:'right'}); check('Mouse steering setting preserves camera orbit on foot',Math.abs((await controls()).cameraYaw-footYaw)>0.5);
   await canvas.focus(); await page.keyboard.press('m'); await page.getByRole('dialog').waitFor(); check('M opens world map',await page.getByRole('dialog').isVisible()); await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Save game',exact:true}).click();
-  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('kow.save.v1'))); check('Chosen male outfit saved',saved.avatar.gender==='male' && saved.avatar.outfit==='field');
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('kow.save.v2'))); check('Chosen male outfit saved',saved.avatar.gender==='male' && saved.avatar.outfit==='field');
   await start('female');
   await page.getByRole('button',{name:'Arrow keys',exact:true}).click();
   a=await state(); await key('ArrowUp',650); b=await state(); check('Female character moves',a.position.z-b.position.z>1);

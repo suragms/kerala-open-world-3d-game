@@ -1,0 +1,95 @@
+{
+  "generatedAt": "2026-10-31T13:33:46.069Z",
+  "routes": [
+    {
+      "id": "thrissur-guruvayur",
+      "origin": "Thrissur KSRTC Bus Station",
+      "destination": "Guruvayur KSRTC Bus Stand",
+      "sourceDistance": 26327.4,
+      "localGeometryMetres": 26280,
+      "samples": 2629,
+      "minimumTerrainHeight": -3.8,
+      "maximumTerrainHeight": 36.4,
+      "maximumSampledGrade": 0.111,
+      "missingTerrainSamples": 0,
+      "flags": [],
+      "scope": "10m lane-centre sampling against imported endpoint/corridor footprints and coarse DEM. OSM extraction is incomplete; this does not certify legal bus access or surveyed deck heights."
+    },
+    {
+      "id": "ernakulam-aluva",
+      "origin": "Vyttila Mobility Hub",
+      "destination": "Aluva Private Bus Stand",
+      "sourceDistance": 18125.4,
+      "localGeometryMetres": 18162,
+      "samples": 1817,
+      "minimumTerrainHeight": 3,
+      "maximumTerrainHeight": 21.4,
+      "maximumSampledGrade": 0.07,
+      "missingTerrainSamples": 0,
+      "flags": [],
+      "scope": "10m lane-centre sampling against imported endpoint/corridor footprints and coarse DEM. OSM extraction is incomplete; this does not certify legal bus access or surveyed deck heights."
+    },
+    {
+      "id": "thrissur-ernakulam",
+      "origin": "Thrissur KSRTC Bus Station",
+      "destination": "KSRTC Bus Station Ernakulam",
+      "sourceDistance": 76571.6,
+      "localGeometryMetres": 76808,
+      "samples": 7681,
+      "minimumTerrainHeight": 0.6,
+      "maximumTerrainHeight": 45.8,
+      "maximumSampledGrade": 0.11,
+      "missingTerrainSamples": 0,
+      "flags": [
+        {
+          "source": "https://www.openstreetmap.org/way/993859557",
+          "type": "water polygon crossing",
+          "metres": 73600,
+          "bridge": true
+        }
+      ],
+      "scope": "10m lane-centre sampling against imported endpoint/corridor footprints and coarse DEM. OSM extraction is incomplete; this does not certify legal bus access or surveyed deck heights."
+    },
+    {
+      "id": "kozhikode-kannur",
+      "origin": "Kozhikode KSRTC Bus Terminal",
+      "destination": "Kannur KSRTC Bus Stand",
+      "sourceDistance": 92394.9,
+      "localGeometryMetres": 92689,
+      "samples": 9269,
+      "minimumTerrainHeight": 1.1,
+      "maximumTerrainHeight": 49.8,
+      "maximumSampledGrade": 0.162,
+      "missingTerrainSamples": 0,
+      "flags": [],
+      "scope": "10m lane-centre sampling against imported endpoint/corridor footprints and coarse DEM. OSM extraction is incomplete; this does not certify legal bus access or surveyed deck heights."
+    },
+    {
+      "id": "kottayam-ernakulam",
+      "origin": "KSRTC Kottayam",
+      "destination": "KSRTC Bus Station Ernakulam",
+      "sourceDistance": 66893.9,
+      "localGeometryMetres": 66946,
+      "samples": 6695,
+      "minimumTerrainHeight": 3.2,
+      "maximumTerrainHeight": 50.3,
+      "maximumSampledGrade": 0.167,
+      "missingTerrainSamples": 0,
+      "flags": [
+        {
+          "source": "https://www.openstreetmap.org/way/507367984",
+          "type": "water polygon crossing",
+          "metres": 33480,
+          "bridge": true
+        },
+        {
+          "source": "https://www.openstreetmap.org/way/1312327375",
+          "type": "water polygon crossing",
+          "metres": 64490,
+          "bridge": true
+        }
+      ],
+      "scope": "10m lane-centre sampling against imported endpoint/corridor footprints and coarse DEM. OSM extraction is incomplete; this does not certify legal bus access or surveyed deck heights."
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .playwright-cli/
+.playwright-mcp/
 *.log
 *.tsbuildinfo
 data-cache/

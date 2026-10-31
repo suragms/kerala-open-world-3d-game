@@ -1,0 +1,330 @@
+{
+  "source": "Mapzen / Tilezen Terrain Tiles; SRTM and GMTED2010 courtesy of USGS; ETOPO1 courtesy of NOAA",
+  "reference": "https://registry.opendata.aws/terrain-tiles/",
+  "attribution": "https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
+  "retrieved": "2026-10-23",
+  "areas": {
+    "airport-ccj": {
+      "file": "elevation-airport-ccj.json",
+      "step": 80,
+      "minimum": 12.6,
+      "maximum": 219.6,
+      "samples": 5041
+    },
+    "airport-cnn": {
+      "file": "elevation-airport-cnn.json",
+      "step": 80,
+      "minimum": 7.0,
+      "maximum": 157.6,
+      "samples": 5041
+    },
+    "airport-cok": {
+      "file": "elevation-airport-cok.json",
+      "step": 80,
+      "minimum": -3.6,
+      "maximum": 33.4,
+      "samples": 5041
+    },
+    "airport-trv": {
+      "file": "elevation-airport-trv.json",
+      "step": 80,
+      "minimum": -7.0,
+      "maximum": 45.7,
+      "samples": 5041
+    },
+    "alappuzha": {
+      "file": "elevation-alappuzha.json",
+      "step": 80,
+      "minimum": -3.0,
+      "maximum": 16.8,
+      "samples": 5041
+    },
+    "bus-alappuzha": {
+      "file": "elevation-bus-alappuzha.json",
+      "step": 80,
+      "minimum": -3.0,
+      "maximum": 17.1,
+      "samples": 5041
+    },
+    "bus-aluva": {
+      "file": "elevation-bus-aluva.json",
+      "step": 80,
+      "minimum": -5.1,
+      "maximum": 42.8,
+      "samples": 5041
+    },
+    "bus-east-fort": {
+      "file": "elevation-bus-east-fort.json",
+      "step": 80,
+      "minimum": -2.0,
+      "maximum": 62.9,
+      "samples": 5041
+    },
+    "bus-ernakulam": {
+      "file": "elevation-bus-ernakulam.json",
+      "step": 80,
+      "minimum": -4.4,
+      "maximum": 19.2,
+      "samples": 5041
+    },
+    "bus-kalpetta": {
+      "file": "elevation-bus-kalpetta.json",
+      "step": 80,
+      "minimum": 728.9,
+      "maximum": 1243.6,
+      "samples": 5041
+    },
+    "bus-kasaragod": {
+      "file": "elevation-bus-kasaragod.json",
+      "step": 80,
+      "minimum": -4.0,
+      "maximum": 73.0,
+      "samples": 5041
+    },
+    "bus-kollam": {
+      "file": "elevation-bus-kollam.json",
+      "step": 80,
+      "minimum": -3.0,
+      "maximum": 26.1,
+      "samples": 5041
+    },
+    "bus-kunnamkulam": {
+      "file": "elevation-bus-kunnamkulam.json",
+      "step": 80,
+      "minimum": -6.9,
+      "maximum": 63.4,
+      "samples": 5041
+    },
+    "bus-malappuram": {
+      "file": "elevation-bus-malappuram.json",
+      "step": 80,
+      "minimum": 9.8,
+      "maximum": 149.7,
+      "samples": 5041
+    },
+    "bus-palakkad": {
+      "file": "elevation-bus-palakkad.json",
+      "step": 80,
+      "minimum": 64.3,
+      "maximum": 111.1,
+      "samples": 5041
+    },
+    "bus-pathanamthitta": {
+      "file": "elevation-bus-pathanamthitta.json",
+      "step": 80,
+      "minimum": 14.5,
+      "maximum": 205.1,
+      "samples": 5041
+    },
+    "bus-sakthan": {
+      "file": "elevation-bus-sakthan.json",
+      "step": 80,
+      "minimum": -7.0,
+      "maximum": 35.4,
+      "samples": 5041
+    },
+    "bus-thampanoor": {
+      "file": "elevation-bus-thampanoor.json",
+      "step": 80,
+      "minimum": 1.0,
+      "maximum": 63.3,
+      "samples": 5041
+    },
+    "bus-thodupuzha": {
+      "file": "elevation-bus-thodupuzha.json",
+      "step": 80,
+      "minimum": 21.4,
+      "maximum": 127.3,
+      "samples": 5041
+    },
+    "ernakulam": {
+      "file": "elevation-ernakulam.json",
+      "step": 80,
+      "minimum": -7.7,
+      "maximum": 23.0,
+      "samples": 5041
+    },
+    "forum-kochi": {
+      "file": "elevation-forum-kochi.json",
+      "step": 80,
+      "minimum": -9.1,
+      "maximum": 19.1,
+      "samples": 5041
+    },
+    "idukki": {
+      "file": "elevation-idukki.json",
+      "step": 80,
+      "minimum": 1443.6,
+      "maximum": 2010.5,
+      "samples": 5041
+    },
+    "kaloor-stadium": {
+      "file": "elevation-kaloor-stadium.json",
+      "step": 80,
+      "minimum": -2.6,
+      "maximum": 20.9,
+      "samples": 5041
+    },
+    "kannur": {
+      "file": "elevation-kannur.json",
+      "step": 80,
+      "minimum": -8.0,
+      "maximum": 44.0,
+      "samples": 5041
+    },
+    "kasaragod": {
+      "file": "elevation-kasaragod.json",
+      "step": 80,
+      "minimum": -18.0,
+      "maximum": 48.0,
+      "samples": 5041
+    },
+    "kollam": {
+      "file": "elevation-kollam.json",
+      "step": 80,
+      "minimum": -5.0,
+      "maximum": 26.9,
+      "samples": 5041
+    },
+    "kottayam": {
+      "file": "elevation-kottayam.json",
+      "step": 80,
+      "minimum": -80.0,
+      "maximum": 30.6,
+      "samples": 5041
+    },
+    "kozhikode": {
+      "file": "elevation-kozhikode.json",
+      "step": 80,
+      "minimum": -5.0,
+      "maximum": 36.8,
+      "samples": 5041
+    },
+    "kundannoor": {
+      "file": "elevation-kundannoor.json",
+      "step": 80,
+      "minimum": -8.5,
+      "maximum": 17.6,
+      "samples": 5041
+    },
+    "lulu-mall": {
+      "file": "elevation-lulu-mall.json",
+      "step": 80,
+      "minimum": -3.2,
+      "maximum": 45.5,
+      "samples": 5041
+    },
+    "malappuram": {
+      "file": "elevation-malappuram.json",
+      "step": 80,
+      "minimum": 8.1,
+      "maximum": 158.7,
+      "samples": 5041
+    },
+    "palakkad": {
+      "file": "elevation-palakkad.json",
+      "step": 80,
+      "minimum": 66.2,
+      "maximum": 114.2,
+      "samples": 5041
+    },
+    "pathanamthitta": {
+      "file": "elevation-pathanamthitta.json",
+      "step": 80,
+      "minimum": -13.1,
+      "maximum": 89.5,
+      "samples": 5041
+    },
+    "station-ernakulam": {
+      "file": "elevation-station-ernakulam.json",
+      "step": 80,
+      "minimum": -4.5,
+      "maximum": 16.9,
+      "samples": 5041
+    },
+    "station-thiruvananthapuram": {
+      "file": "elevation-station-thiruvananthapuram.json",
+      "step": 80,
+      "minimum": 0.4,
+      "maximum": 61.9,
+      "samples": 5041
+    },
+    "station-thrissur-guruvayur": {
+      "file": "elevation-station-thrissur-guruvayur.json",
+      "step": 80,
+      "minimum": -4.9,
+      "maximum": 34.3,
+      "samples": 5041
+    },
+    "station-thrissur": {
+      "file": "elevation-station-thrissur.json",
+      "step": 80,
+      "minimum": -7.7,
+      "maximum": 34.9,
+      "samples": 5041
+    },
+    "thiruvananthapuram": {
+      "file": "elevation-thiruvananthapuram.json",
+      "step": 80,
+      "minimum": -3.0,
+      "maximum": 61.8,
+      "samples": 5041
+    },
+    "thrissur": {
+      "file": "elevation-thrissur.json",
+      "step": 80,
+      "minimum": -6.4,
+      "maximum": 36.3,
+      "samples": 5041
+    },
+    "vyttila-hub": {
+      "file": "elevation-vyttila-hub.json",
+      "step": 80,
+      "minimum": -10.3,
+      "maximum": 23.2,
+      "samples": 5041
+    },
+    "wayanad": {
+      "file": "elevation-wayanad.json",
+      "step": 80,
+      "minimum": 721.5,
+      "maximum": 1103.3,
+      "samples": 5041
+    },
+    "corridor-thrissur-guruvayur": {
+      "file": "elevation-corridor-thrissur-guruvayur.json",
+      "step": 160,
+      "minimum": -9.1,
+      "maximum": 149.0,
+      "samples": 14196
+    },
+    "corridor-ernakulam-aluva": {
+      "file": "elevation-corridor-ernakulam-aluva.json",
+      "step": 160,
+      "minimum": -9.5,
+      "maximum": 56.7,
+      "samples": 9180
+    },
+    "corridor-thrissur-ernakulam": {
+      "file": "elevation-corridor-thrissur-ernakulam.json",
+      "step": 160,
+      "minimum": -14.4,
+      "maximum": 769.2,
+      "samples": 65886
+    },
+    "corridor-kozhikode-kannur": {
+      "file": "elevation-corridor-kozhikode-kannur.json",
+      "step": 160,
+      "minimum": -76.3,
+      "maximum": 1332.5,
+      "samples": 147870
+    },
+    "corridor-kottayam-ernakulam": {
+      "file": "elevation-corridor-kottayam-ernakulam.json",
+      "step": 160,
+      "minimum": -117.0,
+      "maximum": 211.8,
+      "samples": 68598
+    }
+  }
+}

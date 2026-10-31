@@ -21,6 +21,12 @@ These are generalized historical administrative polygons, not cadastral or prese
 
 The Aranmula Parthasarathy Temple coordinate is an attributed factual coordinate from [Kerala Tourism's temple reference](https://www.keralatourism.org/temples/pathanamthitta/aranmula-parthasarathy): 9.328000 N, 76.687614 E. The register explicitly identifies this source. Other Tourism pages provided descriptive geographic/architectural references. No Tourism photographs, prose, textures or 3D models are redistributed.
 
+## Elevation data added for Phase 8
+
+Local scenes and bus corridors use sampled **Mapzen / Tilezen Terrain Tiles (Skadi HGT)**, accessed on 23 October 2026 from the [AWS Open Data registry](https://registry.opendata.aws/terrain-tiles/). SRTM and GMTED2010 terrain data are courtesy of the U.S. Geological Survey; global ETOPO1 data are courtesy of NOAA. See the [upstream attribution and source terms](https://github.com/tilezen/joerd/blob/master/docs/attribution.md).
+
+The original HGT values are decoded, void samples are excluded or filled from nearby valid samples, and heights are resampled to 80 m local grids or 160 m corridor grids and quantized to 0.1 m. The game uses triangular interpolation to match its rendered ground. There is no vertical exaggeration. These are coarse terrain reconstructions, with source errors and coastal artifacts possible; they do not provide surveyed building, road-deck, bridge or runway heights. Every elevation file records its source, processing, date, coverage and source URLs. Horizontal OSM coordinates are unchanged. The failed experimental Terrarium import is not used by the game.
+
 ## Original assets and dependencies
 
 Character meshes, buildings, landmark interpretations, vehicles, vegetation, texture noise and synthesized ambient/engine audio were authored for this project. They are approximate original game assets. No proprietary GTA content, Google imagery/geometry or third-party character-model pack is included.

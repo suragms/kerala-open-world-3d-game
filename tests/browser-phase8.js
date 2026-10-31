@@ -1,0 +1,56 @@
+async (page) => {
+  const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+  const check=(value,message)=>{if(!value)throw new Error(message);};
+  const state=()=>page.evaluate(()=>window.__KOW__.snapshot());
+  await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
+  await page.getByRole('textbox',{name:'Search places',exact:true}).fill('Thrissur KSRTC Bus Station');
+  await page.getByRole('button',{name:'Bus stations',exact:true}).click();
+  await page.locator('.search-results .place-result').first().click();
+  await page.getByRole('button',{name:'Explore this location',exact:true}).click();
+  await page.waitForFunction(()=>window.__KOW__?.diagnostics().area==='station-thrissur');
+  await page.getByRole('button',{name:'Mouse movement',exact:true}).click();
+  await page.getByRole('button',{name:'Toggle run',exact:true}).click();
+  await page.getByRole('button',{name:'Travel by bus, rail or air',exact:true}).click();
+  const route=page.locator('.bus-service').filter({hasText:'Guruvayur KSRTC'});
+  check(await route.count()===1,'Thrissur–Guruvayur service unavailable');
+  await route.getByRole('button',{name:/Walk to departure station/}).click();
+  await page.waitForFunction(()=>!!window.__KOW__.snapshot().nearStation,null,{timeout:60000});
+  await page.screenshot({path:'output/playwright/phase8-suite/phase8-thrissur-terminal.png'});
+  await page.getByRole('button',{name:'Travel by bus, rail or air',exact:true}).click();
+  await page.locator('.bus-service').filter({hasText:'Guruvayur KSRTC'}).getByRole('button',{name:'Wait for this bus',exact:true}).click();
+  await page.waitForFunction(()=>!!window.__KOW__?.journey(),null,{timeout:60000});
+  await page.getByRole('button',{name:'Walk to passenger door',exact:true}).click();
+  await page.waitForFunction(()=>window.__KOW__.snapshot().bus?.canBoard,null,{timeout:60000});
+  const boarding=await state(); check(boarding.bus.speed<.1&&boarding.bus.door===1,'Unsafe boarding eligibility');
+  await page.screenshot({path:'output/playwright/phase8-suite/phase8-boarding.png'});
+  await page.getByRole('button',{name:'Board bus',exact:true}).click();
+  await page.getByRole('dialog',{name:'Choose a passenger seat',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Seat 1 available',exact:true}).click();
+  check(await page.getByRole('button',{name:'Seat 2 occupied',exact:true}).isDisabled(),'Occupied seat selectable');
+  await page.screenshot({path:'output/playwright/phase8-suite/phase8-seat-selection.png'});
+  await page.getByRole('button',{name:'Begin full journey',exact:true}).click();
+  await page.waitForFunction(()=>window.__KOW__.snapshot().bus?.phase==='travelling');
+  await page.waitForTimeout(2500);
+  const travelling=await state(); check(travelling.bus.door===0&&travelling.bus.speed>0,'Bus departure failed');
+  const cameras=[];
+  for(let i=0;i<4;i++){
+    cameras.push((await state()).bus.camera);
+    await page.screenshot({path:`output/playwright/phase8-suite/phase8-camera-${i}.png`});
+    await page.locator('.bus-journey').getByRole('button',{name:'Change camera',exact:true}).click();
+    await page.waitForTimeout(350);
+  }
+  check(new Set(cameras).size===4,'Bus camera switching failed');
+  await page.locator('.bus-journey').getByRole('button',{name:'Fast Journey',exact:true}).click();
+  await page.waitForFunction(()=>window.__KOW__.snapshot().bus?.phase==='arrived',null,{timeout:60000});
+  await page.screenshot({path:'output/playwright/phase8-suite/phase8-guruvayur-arrival.png'});
+  await page.getByRole('button',{name:'Exit at stop',exact:true}).click();
+  await page.waitForFunction(()=>window.__KOW__.snapshot().bus?.phase==='exited');
+  const arrival=await state(); check(arrival.locality.includes('Guruvayur'),'Arrival locality incorrect');
+  check(!(await page.evaluate(()=>window.__KOW__.diagnostics().blocked)),'Passenger exit blocked');
+  await page.screenshot({path:'output/playwright/phase8-suite/phase8-guruvayur-on-foot.png'});
+  await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
+  await page.getByRole('heading',{name:'Your Kerala.',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Close world map',exact:true}).click();
+  check(errors.length===0,errors.join('\n'));
+  return {boarding,travelling,cameras,arrival,errors};
+}

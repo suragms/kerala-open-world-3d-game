@@ -1,5 +1,7 @@
 # Kerala Open World — verified implementation report
 
+> This is the historical October 16 baseline. Phase 8 adds physical bus journeys, gamepads, terrain and transport cameras; see `PHASE8_IMPLEMENTATION_REPORT.md` for the current verification record.
+
 > Later character, input, collision and camera upgrades are documented in [the movement report](CHARACTER_MOVEMENT_REPORT.md). Test counts below describe the original baseline build.
 
 Verified on **16 October 2026** in an actual desktop browser. Local app: **http://127.0.0.1:5173/**.

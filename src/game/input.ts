@@ -1,10 +1,18 @@
 import type { Settings } from "../types";
+import { controller } from "./gamepad";
+export type InputContext = "ON_FOOT" | "IN_VEHICLE" | "BUS_PASSENGER" | "TRAIN_PASSENGER" | "AIR_TRAVEL" | "MENU_OPEN" | "PAUSED";
 export class InputManager {
   keys = new Set<string>();
   driving = false;
   mouseX = 0;
   leftHeld = false;
   rightHeld = false;
+  mouseDriveDirection: -1 | 0 | 1 = 0;
+  lookAround = false;
+  device = "keyboard";
+  context: InputContext = "ON_FOOT";
+  neutral = 0;
+  private previousClick = 0;
   private cleanups: (() => void)[] = [];
   constructor(
     public canvas: HTMLCanvasElement,
@@ -27,8 +35,9 @@ export class InputManager {
     };
     listen("keydown", (e) => {
       const tag = (e.target as HTMLElement)?.tagName;
-      if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(tag)) return;
+      if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(tag) || (e.target as HTMLElement)?.isContentEditable) return;
       if (!active()) return;
+      this.device = "keyboard";
       if (
         ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(
           e.code,
@@ -50,6 +59,7 @@ export class InputManager {
     listen("blur", () => this.clear());
     const down = (e: PointerEvent) => {
       if (!active()) return;
+      this.device = "mouse";
       e.preventDefault();
       canvas.focus();
       const rect = canvas.getBoundingClientRect();
@@ -57,26 +67,29 @@ export class InputManager {
       callbacks.track?.(e.clientX, e.clientY);
       if (e.button === 0) {
         this.leftHeld = true;
-        if (this.settings.movement === "mouse")
+        if (!this.driving && this.settings.movement === "mouse") {
+          if (performance.now() - this.previousClick < 320) callbacks.action("sprintDestination");
+          this.previousClick = performance.now();
           callbacks.click(e.clientX, e.clientY);
+        }
       }
       if (e.button === 2) {
         this.rightHeld = true;
-        this.leftHeld = false;
+        if (!this.driving) this.leftHeld = false;
       }
       canvas.setPointerCapture(e.pointerId);
     };
     const move = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
+      if (active()) this.device = "mouse";
       this.mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
       callbacks.track?.(e.clientX, e.clientY);
       if (
         active() &&
         this.rightHeld &&
         !(
-          this.settings.mouseSteering &&
           this.driving &&
-          this.settings.movement === "mouse"
+          this.settings.movement === "mouse" && !this.lookAround
         )
       )
         callbacks.orbit(e.movementX, e.movementY);
@@ -120,7 +133,10 @@ export class InputManager {
     alternateNegative: string,
     alternatePositive: string,
   ) {
-    return (
+    if (!this.active() || this.context === "BUS_PASSENGER") return 0;
+    const analog = positive === "forward" ? controller.frame.moveY : controller.frame.moveX;
+    if (Math.abs(analog) > 0.01) this.device = "gamepad";
+    const keyboard = (
       Number(
         this.keys.has(this.settings.bindings[positive]) ||
           this.keys.has(alternatePositive),
@@ -130,11 +146,22 @@ export class InputManager {
           this.keys.has(alternateNegative),
       )
     );
+    return keyboard || analog;
+  }
+  setContext(context: InputContext) {
+    if (context !== this.context) this.clear();
+    this.context = context;
+  }
+  setMouseDriveDirection(direction: -1 | 0 | 1) {
+    const available = this.active() && this.context === "IN_VEHICLE" && this.settings.movement === "mouse";
+    if (available) this.device = "mouse";
+    this.mouseDriveDirection = available ? direction : 0;
   }
   clear() {
     this.keys.clear();
     this.leftHeld = false;
     this.rightHeld = false;
+    this.mouseDriveDirection = 0;
   }
   dispose() {
     this.cleanups.forEach((fn) => fn());

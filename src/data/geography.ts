@@ -7,7 +7,13 @@ import type {
   Region,
   Tile,
   Vec2,
+  BusStation,
+  BusService,
+  BusPlan,
+  BusRouteData,
+  TerrainGrid,
 } from "../types";
+import { validTerrain } from "../game/terrain";
 export const METRES_LAT = 111320;
 export function toLocal(coordinate: LonLat, origin: LonLat): Vec2 {
   return {
@@ -204,9 +210,17 @@ export function loadGeography(): Promise<Geography> {
     json<Place[]>("/data/places.json"),
     json<DistrictCollection>("/data/districts.geojson"),
     json<StateNetwork>("/data/state-network.json"),
+    json<{ stations: BusStation[]; routes: BusService[] }>("/data/bus-services.json"),
   ])
-    .then(([regions, places, boundaries, network]) => {
-      const geo = { regions, places, boundaries, network };
+    .then(([regions, places, boundaries, network, buses]) => {
+      const stationPlaces: Place[] = buses.stations.map(s => ({ id: s.id, name: s.name, localName: s.localName,
+        lon: s.coordinate[0], lat: s.coordinate[1], district: s.district, kind: "bus_station", source: s.source,
+        tile: s.tile, theme: "hub", fidelity: s.fidelity, asset: "C — Original procedural terminal", approximation: "Mapped location; terminal architecture is a procedural approximation." }));
+      const enrichedPlaces = places.map(p => {
+        const station = stationPlaces.find(s => s.source === p.source);
+        return station ? { ...p, ...station, id: p.id } : p;
+      });
+      const geo = { regions, places: [...enrichedPlaces, ...stationPlaces.filter(s => !places.some(p => p.source === s.source))], boundaries, network, busStations: buses.stations, busRoutes: buses.routes };
       cachedReport = buildAccuracyReport(geo);
       if (cachedReport.warnings.length)
         console.warn("[KOW GEO] Accuracy warnings:\n" + cachedReport.warnings.join("\n"));
@@ -218,12 +232,33 @@ export function loadGeography(): Promise<Geography> {
     }));
 }
 const tiles = new Map<string, Tile>();
+let terrainIndex: Promise<{ areas: Record<string,{file:string}> }> | undefined;
+async function loadTerrain(id: string): Promise<TerrainGrid | undefined> {
+  const index=await (terrainIndex ??= json<{areas:Record<string,{file:string}>}>("/data/terrain-index.json"));
+  const record=index.areas[id]; if (!record) return undefined;
+  const grid=await json<TerrainGrid>(`/data/${record.file}`);
+  if (!validTerrain(grid)) throw new Error(`The elevation grid for ${id} is invalid. Please retry.`);
+  return grid;
+}
 export async function loadTile(id: string): Promise<Tile> {
   if (tiles.has(id)) return tiles.get(id)!;
-  const tile = await json<Tile>(`/data/${id}.json`);
+  const [source,terrain] = await Promise.all([json<Tile>(`/data/${id}.json`),loadTerrain(id)]);
+  const tile={...source,terrain};
   tiles.set(id, tile);
   if (tiles.size > 3) tiles.delete(tiles.keys().next().value!);
   return tile;
+}
+export async function loadBusPlan(service: BusService, geography: Geography, type: BusPlan["type"]): Promise<{ plan: BusPlan; tile: Tile }> {
+  const [route,terrain] = await Promise.all([json<BusRouteData>(`/data/${service.file}`),loadTerrain(`corridor-${service.id}`)]);
+  const stations = [service.from, service.to].map(id => geography.busStations.find(s => s.id === id)!);
+  if (stations.some(s => !s) || route.points.length < 2) throw new Error("The bus corridor is unavailable.");
+  const origin = stations[0].coordinate;
+  const endpoints = await Promise.all([...new Set(stations.map(s => s.tile))].map(loadTile));
+  const features = new Map<string, Tile["features"][number]>();
+  for (const feature of [...endpoints.flatMap(t => t.features), ...route.features]) features.set(`${feature.type}:${feature.id}`, feature);
+  const radius = Math.max(...route.points.map(p => { const q = toLocal(p, origin); return Math.max(Math.abs(q.x), Math.abs(q.z)); })) + 2200;
+  return { plan: { route, stations, type }, tile: { id: `corridor-${service.id}`, origin, radius,
+    source: "OpenStreetMap / OSRM derived road corridor", license: "ODbL-1.0", features: [...features.values()], terrain } };
 }
 export function placesInRegion(places: Place[], region: Region): Place[] {
   return places.filter(

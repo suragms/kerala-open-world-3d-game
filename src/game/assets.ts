@@ -917,6 +917,8 @@ export class VehicleModel {
       for (const z of [bus ? -3.1 : -1.28, bus ? 3.05 : 1.25])
         this.wheel(x, 0.46, z, bus ? 0.55 : 0.4, bus ? 0.3 : 0.23);
     for (const x of [-w * 0.35, w * 0.35]) {
+      const brakeMaterial = material("#9c3128",0.35).clone();
+      brakeMaterial.userData.transient = true;
       box(
         this.root,
         material("#f7e9b2", 0.3),
@@ -930,7 +932,7 @@ export class VehicleModel {
       this.brakes.push(
         box(
           this.root,
-          material("#9c3128", 0.35),
+          brakeMaterial,
           x,
           0.93,
           length / 2 + 0.02,
@@ -1017,7 +1019,7 @@ export function airportGate(group: THREE.Object3D, x: number, y: number, z: numb
     box(group, material("#4a6a6e"), x + i * 1.1, y + 0.55, z + 2.5, 0.95, 0.22, 0.5);
 }
 
-export function platformCanopy(group: THREE.Object3D, points: Vec2[]) {
+export function platformCanopy(group: THREE.Object3D, points: Vec2[], height: (x:number,z:number)=>number = ()=>0) {
   if (points.length < 2) return;
   for (let i = 0; i + 1 < points.length; i++) {
     const a = points[i],
@@ -1025,16 +1027,16 @@ export function platformCanopy(group: THREE.Object3D, points: Vec2[]) {
     const mx = (a.x + b.x) / 2,
       mz = (a.z + b.z) / 2;
     const len = Math.hypot(b.x - a.x, b.z - a.z);
-    const angle = Math.atan2(b.x - a.x, b.z - a.z);
-    const slab = box(group, material("#9b9786"), mx, 4.2, mz, len, 0.18, 4.0);
+    const angle = Math.atan2(a.z-b.z,b.x-a.x), base=height(mx,mz);
+    const slab = box(group, material("#9b9786"), mx, base+4.2, mz, len, 0.18, 4.0);
     slab.rotation.y = angle;
     for (const side of [-1.6, 1.6]) {
       cylinder(
         group,
         palette.dark,
-        mx + Math.cos(angle + Math.PI / 2) * side,
-        2.1,
-        mz + Math.sin(angle + Math.PI / 2) * side,
+        mx + (-(b.z-a.z)/(len||1)) * side,
+        base+2.1,
+        mz + ((b.x-a.x)/(len||1)) * side,
         0.1,
         4.2,
       );

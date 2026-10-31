@@ -4,7 +4,9 @@ import {
   districtAt,
   haversine,
 } from "../src/data/geography";
-import type { DistrictCollection, Place, Region, Tile } from "../src/types";
+import type { BusRouteData, BusService, BusStation, DistrictCollection, Place, Region, Tile } from "../src/types";
+import { toLocal } from "../src/data/geography";
+import { validateBusGeometry } from "../src/game/bus";
 const read = <T>(name: string) =>
   JSON.parse(readFileSync(`public/data/${name}`, "utf8")) as T;
 const boundaries = read<DistrictCollection>("districts.geojson"),
@@ -132,6 +134,25 @@ for (const [iata, district] of Object.entries({
   if (airport.district !== district)
     throw new Error(`${iata} in ${airport.district}, expected ${district}`);
 }
+const busRegistry = read<{ stations: BusStation[]; routes: BusService[] }>("bus-services.json");
+// Location records with only public geographic coordinates are Level B. Scene
+// exteriors are original procedural art and remain Level C; none is advertised as A.
+for (const region of regions) region.fidelity="C";
+for (const extra of extras) extra.fidelity="C";
+for (const place of places) place.fidelity=place.kind==="landmark" || Boolean(place.tile) ? "C" : "B";
+for (const station of busRegistry.stations) {
+  if (districtAt(station.coordinate, boundaries) !== station.district) throw new Error(`Bus station district mismatch: ${station.name}`);
+  if (!existsSync(`public/data/${station.tile}.json`)) throw new Error(`Bus station tile missing: ${station.name}`);
+  if (!station.source.startsWith("https://www.openstreetmap.org/") || !["A", "B", "C"].includes(station.fidelity)) throw new Error(`Bus station provenance missing: ${station.name}`);
+}
+const busRoutes = busRegistry.routes.map(service => {
+  const from = busRegistry.stations.find(s => s.id === service.from), to = busRegistry.stations.find(s => s.id === service.to);
+  if (!from || !to) throw new Error(`Bus route terminal missing: ${service.id}`);
+  const route = read<BusRouteData>(service.file);
+  if (!validateBusGeometry(route.points.map(p => toLocal(p, from.coordinate)), service.distance)) throw new Error(`Bus route disconnected: ${service.id}`);
+  if(!route.drivingPoints || !route.clearance || !validateBusGeometry(route.drivingPoints.map(p=>toLocal(p,from.coordinate)),service.distance)) throw new Error(`Bus clearance track missing or invalid: ${service.id}. Run scripts/prepare-bus-tracks.ts after importing roads.`);
+  return { id: service.id, metres: service.distance, vertices: route.points.length, source: service.source, serviceStatus: "Simulated; not an operational timetable", surveyStatus: "OSM driving profile; bus access and elevation not independently surveyed" };
+});
 const report = {
   generatedAt: new Date().toISOString(),
   boundaryEdgeCases: edgeCases,
@@ -148,6 +169,9 @@ const report = {
   airports,
   stations: places.filter((p) => p.kind === "station").length,
   excluded,
+  busStations: busRegistry.stations.length,
+  busDistricts: new Set(busRegistry.stations.map(s => s.district)).size,
+  busRoutes,
   coverage: regions.map((r) => {
     const tile = read<Tile>(`${r.id}.json`);
     return {
@@ -159,6 +183,8 @@ const report = {
   }),
 };
 writeFileSync("public/data/places.json", JSON.stringify(places));
+writeFileSync("public/data/regions.json", JSON.stringify(regions,null,2));
+writeFileSync("public/data/fidelity-register.json", JSON.stringify({ levels:{ A:"Verified recognizable exterior supported by geographic and visual references", B:"Sourced geographic location or approximate footprint; exterior not verified", C:"Original procedural architectural approximation at a sourced location" }, policy:"No Level A models are claimed. Geographic positions are distinct from architectural fidelity.", regions:regions.map(r=>({id:r.id,fidelity:r.fidelity,source:r.source})), busStations:busRegistry.stations.map(s=>({id:s.id,fidelity:s.fidelity,source:s.source})) },null,2));
 writeFileSync("public/data/extra-areas.json", JSON.stringify(extras, null, 2));
 writeFileSync(
   "public/data/validation-report.json",

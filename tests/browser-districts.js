@@ -29,7 +29,7 @@ async (page) => {
     if (!Number.isFinite(state.position.x) || diag.roads < 1 || diag.blocked)
       throw new Error(`Invalid world in ${region.id}`);
     await page.screenshot({
-      path: `output/playwright/district-${region.id}.png`,
+      path: `output/playwright/phase8-suite/district-${region.id}.png`,
     });
     results.push({
       district: region.id,

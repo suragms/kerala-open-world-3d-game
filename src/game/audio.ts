@@ -1,4 +1,4 @@
-import type { Settings } from "../types";
+import type { Settings, Theme } from "../types";
 /** Original synthesized audio. No third-party recordings are included. */
 export class AudioManager {
   private context?: AudioContext;
@@ -9,6 +9,17 @@ export class AudioManager {
   private noise?: AudioBufferSourceNode;
   private filter?: BiquadFilterNode;
   private birdTime = 0;
+  private atmosphereTime=0;
+  cue(kind: "door" | "bell" | "departure" | "brake" | "rail" | "airport" | "market") {
+    const ctx = this.context; if (!ctx || !this.master) return;
+    const oscillator = ctx.createOscillator(), gain = ctx.createGain();
+    oscillator.type = kind === "door" || kind === "brake" ? "sawtooth" : kind === "rail" ? "triangle" : "sine";
+    oscillator.frequency.setValueAtTime(kind === "bell" ? 880 : kind === "door" ? 120 : kind === "rail" ? 65 : kind === "airport" ? 520 : kind === "market" ? 210+Math.random()*90 : kind === "brake" ? 1800 : 330, ctx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(kind === "bell" ? 660 : kind === "door" ? 50 : 440, ctx.currentTime + 0.25);
+    gain.gain.setValueAtTime(0.035, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+    oscillator.connect(gain).connect(this.master); oscillator.start(); oscillator.stop(ctx.currentTime + 0.45);
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+  }
   start() {
     if (this.context) {
       void this.context.resume();
@@ -57,6 +68,7 @@ export class AudioManager {
     driving: boolean,
     paused: boolean,
     time: number,
+    environment: { theme?:Theme; nearStation?:boolean; market?:boolean; trainSpeed?:number } = {},
   ) {
     if (
       !this.context ||
@@ -73,14 +85,16 @@ export class AudioManager {
       0.15,
     );
     const rain = settings.weather === "rainy" || settings.weather === "monsoon";
+    const coast=["beach","fishing","backwater"].includes(environment.theme??""), mountain=environment.theme==="tea" || environment.theme==="dam";
+    const waves=coast?.18+Math.sin(time*.6)*.08:mountain?.2+Math.sin(time*.3)*.05:.15;
     this.ambience.gain.setTargetAtTime(
-      settings.ambience * (rain ? 0.65 : 0.2),
+      settings.ambience * (rain ? 0.65 : waves),
       ctx.currentTime,
       0.1,
     );
     if (this.filter)
       this.filter.frequency.setTargetAtTime(
-        rain ? 2400 : 450,
+        rain ? 2400 : coast ? 950 : mountain ? 650 : 450,
         ctx.currentTime,
         0.3,
       );
@@ -94,6 +108,12 @@ export class AudioManager {
       ctx.currentTime,
       0.1,
     );
+    if(!paused && time>this.atmosphereTime){
+      if((environment.trainSpeed??0)>.5){this.cue("rail");this.atmosphereTime=time+Math.max(.18,1.8/(environment.trainSpeed??1));}
+      else if(environment.theme==="airport"){this.cue("airport");this.atmosphereTime=time+18;}
+      else if(environment.nearStation||environment.market){this.cue("market");this.atmosphereTime=time+3+Math.random()*3;}
+      else this.atmosphereTime=time+1;
+    }
     if (!paused && !rain && settings.time !== "night" && time > this.birdTime) {
       this.birdTime = time + 6 + Math.random() * 7;
       const oscillator = ctx.createOscillator(),
@@ -117,6 +137,7 @@ export class AudioManager {
       oscillator.connect(gain).connect(this.master);
       oscillator.start();
       oscillator.stop(ctx.currentTime + 0.26);
+      oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
     }
   }
   dispose() {

@@ -128,6 +128,17 @@ export function SettingsPanel({
                   onChange={(e) => update("invert", e.target.checked)}
                 />
               </Setting>
+              <Range label="Steering sensitivity" value={settings.steeringSensitivity} min={0.3} max={2.5} step={0.1} onChange={v => update("steeringSensitivity", v)} />
+              <Range label="Steering dead zone" value={settings.steeringDeadzone} min={0} max={0.4} step={0.02} onChange={v => update("steeringDeadzone", v)} />
+              <Setting label="Steering assistance" detail="Progressive steering and lower sensitivity at higher speeds."><input type="checkbox" aria-label="Steering assistance" checked={settings.steeringAssist} onChange={e => update("steeringAssist", e.target.checked)} /></Setting>
+              <div className="subsection-label">GAME CONTROLLER</div>
+              <p className="fine-note">Connect a browser-compatible controller and press a button. Left stick moves, right stick looks, bottom face jumps, left face interacts, Start pauses, Select opens the map. D-pad focuses menus; bottom face selects; right face closes. On a dropdown, left/right changes its value. Customize nonstandard layouts below.</p>
+              <Range label="Controller dead zone" value={settings.gamepadDeadzone} min={0.05} max={0.5} step={0.01} onChange={v => update("gamepadDeadzone", v)} />
+              <Setting label="Controller vibration"><input aria-label="Controller vibration" type="checkbox" checked={settings.gamepadVibration} onChange={e => update("gamepadVibration", e.target.checked)} /></Setting>
+              <details><summary>Controller button and axis mappings</summary>
+                {Object.entries(settings.gamepadButtons).map(([name, index]) => <Setting key={name} label={`Controller ${name}`}><input type="number" min={0} max={31} aria-label={`Controller ${name} button`} value={index} onChange={e => update("gamepadButtons", { ...settings.gamepadButtons, [name]: Math.max(0, Math.min(31, Number(e.target.value))) })} /></Setting>)}
+                {settings.gamepadAxes.map((axis, index) => <Setting key={index} label={["Move horizontal", "Move vertical", "Look horizontal", "Look vertical"][index]}><input type="number" min={0} max={15} aria-label={`Controller axis ${index + 1}`} value={axis} onChange={e => update("gamepadAxes", settings.gamepadAxes.map((v, i) => i === index ? Math.max(0, Math.min(15, Number(e.target.value))) : v))} /></Setting>)}
+              </details>
               <div className="subsection-label">
                 <Keyboard size={14} /> KEY BINDINGS
               </div>
@@ -182,6 +193,7 @@ export function SettingsPanel({
                   ))}
                 </select>
               </Setting>
+              <Range label="Bus stop dwell (seconds)" value={settings.busDwell} min={6} max={30} step={1} onChange={v => update("busDwell", v)} />
               <Setting label="Time of day">
                 <select
                   aria-label="Time of day"

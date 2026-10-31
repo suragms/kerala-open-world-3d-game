@@ -1,0 +1,43 @@
+async (page) => {
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const check=(name,condition,detail)=>{if(!condition)throw new Error(`${name}: ${JSON.stringify(detail)}`);return {name,passed:true,detail};};
+  const results=[];
+  const state=()=>page.evaluate(()=>window.__KOW__.snapshot());
+  await page.evaluate(()=>{
+    window.__testPad={id:'Virtual standard controller for regression testing',index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:18},()=>({value:0,pressed:false,touched:false})),timestamp:0};
+    Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.__testPad]});
+  });
+  const buttons=async indices=>{await page.evaluate(indices=>{window.__testPad.buttons.forEach((b,i)=>{b.value=indices.includes(i)?1:0;b.pressed=b.value===1;});},indices);await page.waitForTimeout(160);};
+  const press=async index=>{await buttons([index]);await buttons([]);};
+  const axes=async values=>page.evaluate(values=>{window.__testPad.axes=values;},values);
+  await page.waitForTimeout(350);results.push(check('Controller detection',(await state()).controller.includes('Virtual')));
+  const before=await state();await axes([.45,-.6,0,0]);await page.waitForTimeout(900);await axes([0,0,0,0]);await page.waitForTimeout(300);const moved=await state();
+  results.push(check('Analog movement',Math.hypot(moved.position.x-before.position.x,moved.position.z-before.position.z)>.5,moved.position));
+  const yaw=await page.evaluate(()=>window.__KOW__.controls().cameraYaw);await axes([0,0,.65,0]);await page.waitForTimeout(500);await axes([0,0,0,0]);
+  results.push(check('Controller camera',Math.abs((await page.evaluate(()=>window.__KOW__.controls().cameraYaw))-yaw)>.2));
+  await buttons([0]);await page.waitForTimeout(120);results.push(check('Controller jump',(await state()).groundY>.1,(await state()).groundY));await buttons([]);await page.waitForTimeout(900);
+  await press(9);await page.getByRole('button',{name:'Return to arrival point',exact:false}).click();
+  await press(2);await page.waitForTimeout(350);results.push(check('Controller vehicle entry',(await state()).driving,(await state()).near));
+  await axes([.6,0,0,0]);await buttons([7]);await page.waitForTimeout(1000);const driving=await state();
+  results.push(check('Analog vehicle steering and trigger',driving.speed>4&&Math.abs(driving.steering)>.05,driving));
+  await axes([0,0,0,0]);await buttons([6,0]);await page.waitForTimeout(1800);await buttons([]);await press(2);await page.waitForTimeout(300);
+  results.push(check('Controller vehicle exit',!(await state()).driving));
+  await press(8);await page.getByRole('heading',{name:'Your Kerala.',exact:true}).waitFor();
+  const frozen=await state();await axes([1,-1,0,0]);await press(13);await page.waitForTimeout(450);const afterMenu=await state();
+  results.push(check('Controller menu navigation',await page.evaluate(()=>!!document.activeElement?.closest('[role="dialog"]'))));
+  results.push(check('Menus block gameplay',Math.hypot(afterMenu.position.x-frozen.position.x,afterMenu.position.z-frozen.position.z)<.01));
+  await axes([0,0,0,0]);
+  const focusWithPad=async locator=>{for(let i=0;i<100;i++){if(await locator.evaluate(el=>el===document.activeElement))return;await press(13);}throw new Error('Controller could not focus the requested menu control');};
+  await focusWithPad(page.getByRole('button',{name:'Select Kannur',exact:true}));await press(0);
+  results.push(check('Controller activates SVG district selection',(await page.locator('.map-selection').textContent()).includes('Kannur')));
+  await press(1);await page.waitForTimeout(300);
+  await press(4);await page.getByRole('dialog').waitFor();
+  await focusWithPad(page.getByRole('combobox',{name:'Bus type',exact:true}));await press(15);
+  results.push(check('Controller navigates transport choices',await page.getByRole('combobox',{name:'Bus type',exact:true}).inputValue()==='private'));
+  await press(1);await page.waitForTimeout(300);
+  await axes([1,0,0,0]);await page.waitForTimeout(250);await page.evaluate(()=>{window.__testPad=null;});await page.waitForTimeout(500);
+  const disconnected=await state();results.push(check('Controller disconnect releases movement',!disconnected.controller&&disconnected.speed<.2,disconnected.speed));
+  await page.evaluate(()=>{delete navigator.getGamepads;delete window.__testPad;});
+  await page.screenshot({path:'output/playwright/phase8-gamepad.png'});
+  return {input:'Injected Gamepad API; physical hardware was not available',results,errors};
+}

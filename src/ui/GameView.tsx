@@ -28,6 +28,9 @@ import type {
   Settings,
   Snapshot,
   Tile,
+  BusPlan,
+  BusStation,
+  DistrictCollection,
 } from "../types";
 import { GameEngine } from "../game/engine";
 import { distance, nearestOnSegment } from "../game/navigation";
@@ -38,6 +41,9 @@ export interface GamePayload {
   tile: Tile;
   avatar: AvatarStyle;
   save?: SaveData;
+  busPlan?: BusPlan;
+  busStations?: BusStation[];
+  boundaries?: DistrictCollection;
 }
 export function GameView({
   payload,
@@ -82,6 +88,9 @@ export function GameView({
           },
         },
         payload.save,
+        payload.busStations,
+        payload.busPlan,
+        payload.boundaries,
       );
       engine.current = game;
       latest.current.onReady(game);
@@ -179,6 +188,8 @@ export function GameView({
           },
         }),
         perf: () => game.perfDiagnostics(),
+        journey: () => game.controlDiagnostics().bus,
+        advanceJourney: import.meta.env.DEV ? (seconds: number) => game.advanceVerification(seconds) : undefined,
       };
       return () => {
         engine.current = null;
@@ -219,8 +230,8 @@ export function GameView({
                 <MapPin size={21} strokeWidth={1.5} />
               </span>
               <div>
-                <span>{region.name.toUpperCase()} DISTRICT</span>
-                <strong>{region.town}</strong>
+                <span>{(snapshot.district ?? region.name).toUpperCase()} DISTRICT</span>
+                <strong>{snapshot.locality ?? region.town}</strong>
               </div>
               <span className="live-badge">EXPLORING</span>
             </div>
@@ -299,6 +310,7 @@ export function GameView({
               <CornerUpRight size={16} />
             </button>
           </div>
+          {snapshot.nearStation && !snapshot.bus?.attached && !snapshot.driving ? <button className="station-arrival" onClick={() => onAction("transport")}><small>BUS STATION</small><strong>{snapshot.nearStation.name}</strong><span>View destinations and simulated departures →</span></button> : null}
           <div className="hud-bottom">
             <div className="minimap-cluster">
               <Minimap
@@ -317,7 +329,7 @@ export function GameView({
               {snapshot.near ? (
                 <button
                   className="interact-prompt"
-                  onClick={() => engine.current?.interact()}
+                  onClick={() => engine.current?.interact(snapshot.driving ? "driving" : undefined)}
                 >
                   <kbd>{settings.bindings.interact.replace("Key", "")}</kbd>
                   <span>{snapshot.near}</span>
@@ -376,13 +388,13 @@ export function GameView({
                     <kbd>{snapshot.driving ? "E" : "SPACE"}</kbd>
                     <span>{snapshot.driving ? "Exit" : "Jump"}</span>
                   </div>
-                  <div className="control-line">
+                  <div className="control-line control-line--mouse">
                     <Mouse size={14} />
                     <span>
                       {snapshot.driving &&
                       settings.mouseSteering &&
                       settings.movement === "mouse"
-                        ? "Hold left · drive & steer / right · brake"
+                        ? "Cursor steers · Forward/Reverse · Right click brakes"
                         : "Right drag · look / Scroll · zoom"}
                     </span>
                   </div>
@@ -415,7 +427,7 @@ export function GameView({
             </div>
           </div>
           <div className="mouse-actions">
-            {!snapshot.driving ? (
+            {!snapshot.driving && !snapshot.bus?.attached && !snapshot.rail?.attached ? (
               <>
                 <button
                   onClick={() => engine.current?.action("toggleRun")}
@@ -435,20 +447,66 @@ export function GameView({
                 ) : null}
               </>
             ) : null}
+            {snapshot.driving ? <>
+              {settings.movement === "mouse" ? <>
+                <button
+                  className="mouse-drive-control"
+                  aria-label="Drive forward"
+                  title="Hold to move forward"
+                  onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); engine.current?.setMouseDriveDirection(1); }}
+                  onPointerUp={() => engine.current?.setMouseDriveDirection(0)}
+                  onPointerCancel={() => engine.current?.setMouseDriveDirection(0)}
+                  onLostPointerCapture={() => engine.current?.setMouseDriveDirection(0)}
+                >Forward</button>
+                <button
+                  className="mouse-drive-control"
+                  aria-label="Drive in reverse"
+                  title="Hold to back up"
+                  onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); engine.current?.setMouseDriveDirection(-1); }}
+                  onPointerUp={() => engine.current?.setMouseDriveDirection(0)}
+                  onPointerCancel={() => engine.current?.setMouseDriveDirection(0)}
+                  onLostPointerCapture={() => engine.current?.setMouseDriveDirection(0)}
+                >Reverse</button>
+              </> : null}
+              <button onClick={() => engine.current?.action("handbrake")} aria-pressed={snapshot.handbrake}>Handbrake</button>
+              <button onClick={() => engine.current?.action("reverse")} aria-pressed={snapshot.reverse} title="Toggle gear while nearly stopped">{snapshot.reverse ? "Reverse gear" : "Forward gear"}</button>
+              <button onClick={() => engine.current?.action("lookAround")}>Look around</button>
+              <button onClick={() => engine.current?.interact("driving")}>Exit vehicle</button>
+              <div className="steering-indicator" aria-label="Steering indicator"><i style={{ transform: `translateX(${(snapshot.steering ?? 0) * 35}px)` }} />{snapshot.reverse ? "R" : "D"}</div>
+            </> : null}
+            <button onClick={() => engine.current?.action("camera")} aria-label="Change camera">{snapshot.cameraMode} · Camera</button>
             <button
-              disabled={snapshot.driving}
+              disabled={snapshot.driving || snapshot.bus?.attached || snapshot.rail?.attached}
               onClick={() => engine.current?.action("jump")}
               aria-label="Jump"
             >
               <ArrowUp size={17} /> Jump
             </button>
-            <button
+            {!snapshot.bus?.attached ? <button
               onClick={() => engine.current?.interact()}
               aria-label="Interact"
             >
               E · Interact
-            </button>
+            </button> : null}
           </div>
+          {snapshot.bus && snapshot.bus.phase !== "exited" ? <BusJourneyHUD snapshot={snapshot} action={name => engine.current?.action(name)} walk={() => engine.current?.walkToBusDoor()} map={() => onAction("map")} /> : null}
+          {snapshot.rail?.hasStation && !snapshot.driving && (!snapshot.bus || snapshot.bus.phase==="exited") ? <section className="bus-journey" aria-label="Local train journey">
+            <div className="eyebrow">LOCAL RAIL SHUTTLE · SIMULATION</div>
+            <h3>{snapshot.rail.attached?"Train passenger":"Mapped railway"}</h3>
+            <p>{snapshot.rail.nextStop} · {Math.round(snapshot.rail.speed)} km/h</p>
+            <p>{snapshot.rail.stopped?"Stopped at station":"Following imported rail alignment"}</p>
+            <div className="bus-buttons">{snapshot.rail.attached?<>
+              <button onClick={()=>engine.current?.action("camera")}>Cycle train camera</button>
+              <button onClick={()=>engine.current?.action("requestTrainStop")}>Request station stop</button>
+              <button disabled={!snapshot.rail.canExit} onClick={()=>engine.current?.action("exitTrain")}>Leave train at station</button>
+            </>:<>
+              <button onClick={()=>engine.current?.action("walkTrain")}>Walk to rail boarding area</button>
+              <button disabled={!snapshot.rail.canBoard} onClick={()=>engine.current?.action("boardTrain")}>Board local train</button>
+            </>}</div>
+            <small>{snapshot.rail.camera} · Local segment only; no real service or timetable.</small>
+          </section>:null}
+          {snapshot.bus?.transitioning ? <div className="bus-travel-transition" role="status"><BusFront size={35} /><h2>Fast Journey</h2><p>Advancing to {snapshot.bus.to}…</p><small>The intervening journey is skipped.</small></div> : null}
+          <div className="input-status">{snapshot.controller ? "Controller connected · " : ""}{snapshot.inputDevice} · {snapshot.cameraMode}</div>
           <div className="performance-pill">
             {snapshot.fps} FPS <span /> {settings.quality.toUpperCase()}{" "}
             <span /> {snapshot.chunks} CHUNKS
@@ -467,4 +525,37 @@ export function GameView({
       )}
     </main>
   );
+}
+
+function BusJourneyHUD({ snapshot, action, walk, map }: { snapshot: Snapshot; action: (name: string) => void; walk: () => void; map: () => void }) {
+  const bus = snapshot.bus!;
+  const selecting = ["select-seat", "seated"].includes(bus.phase);
+  const attached = ["boarding", "select-seat", "seated", "closing", "travelling", "dwelling", "arrived"].includes(bus.phase);
+  return <section className="bus-journey" aria-label="Bus journey">
+    <div className="eyebrow">{bus.mode === "fast" ? "FAST JOURNEY" : "BUS JOURNEY"} · SIMULATED SERVICE</div>
+    <h3>{bus.to}</h3>
+    <p>From: {bus.from}</p>
+    <p>Next stop: <strong>{bus.nextStop}</strong></p>
+    <div className="journey-progress"><i style={{ width: `${bus.progress * 100}%` }} /></div>
+    <div className="bus-stats"><span>{formatDistance(bus.remaining)} remaining</span><span>{Math.round(bus.speed)} km/h</span><span>~{Math.ceil(bus.remaining / 650)} min</span></div>
+    <p className="bus-phase" role="status">{bus.phase.replaceAll("-", " ")} · Doors {bus.door > 0.98 ? "open" : bus.door < 0.02 ? "closed" : "moving"} · {bus.passengers} passengers</p>
+    {!attached ? <div className="bus-buttons"><button onClick={walk}>Walk to passenger door</button><button disabled={!bus.canBoard} onClick={() => action("interact")}>Board bus</button></div> : null}
+    {bus.phase === "boarding" ? <p>Entering through the passenger door…</p> : null}
+    {selecting ? <div className="seat-picker" role="dialog" aria-label="Choose a passenger seat" aria-modal="true">
+      <p>Choose a passenger seat · front ↑</p>
+      <div className="seat-grid">{Array.from({ length: bus.type === "mini" ? 12 : 20 }, (_, i) => <button key={i} disabled={bus.occupied.includes(i)} aria-label={`Seat ${i + 1}${bus.occupied.includes(i) ? " occupied" : " available"}`} aria-pressed={bus.seat === i} onClick={() => action(`seat:${i}`)}>{i + 1}</button>)}</div>
+      <p>Travel is seated. Free walking inside the moving bus is unavailable.</p>
+      <button className="primary" disabled={!bus.seated} onClick={() => action("departBus")}>Begin full journey</button>
+      <button onClick={() => action("exitBus")}>Leave bus before departure</button>
+    </div> : null}
+    {attached && !selecting && bus.phase !== "boarding" ? <div className="bus-buttons">
+      <button onClick={() => action("lookAround")}>Look around</button>
+      <button onClick={() => action("camera")}>Change camera</button>
+      <button aria-pressed={bus.requestStop} disabled={bus.phase === "arrived"} onClick={() => action("requestStop")}>{bus.requestStop ? "Stop requested" : "Get off at next stop"}</button>
+      <button disabled={bus.phase === "arrived"} onClick={() => action("fastBus")}>Fast Journey</button>
+      <button onClick={map}>View route</button>
+      <button disabled={!bus.canExit} onClick={() => action("exitBus")}>Exit at stop</button>
+    </div> : null}
+    <small>{bus.camera} · Original bus design · road routing, no real timetable</small>
+  </section>;
 }

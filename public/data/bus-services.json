@@ -1,0 +1,1068 @@
+{
+  "stations": [
+    {
+      "id": "way-467555277",
+      "name": "Kondotty Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "malappuram",
+      "coordinate": [
+        75.96326049230768,
+        11.145822538461537
+      ],
+      "source": "https://www.openstreetmap.org/way/467555277",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "airport-ccj",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-45766128",
+      "name": "K S R T C Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kasaragod",
+      "coordinate": [
+        74.98783876,
+        12.50256719
+      ],
+      "source": "https://www.openstreetmap.org/way/45766128",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-kasaragod",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-254554197",
+      "name": "കൊല്ലം ബസ് സ്റ്റേഷൻ",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kollam",
+      "coordinate": [
+        76.58516642,
+        8.8912017
+      ],
+      "source": "https://www.openstreetmap.org/way/254554197",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-kollam",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-203321867",
+      "name": "Kerala State Road & Transport Corporation",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "palakkad",
+      "coordinate": [
+        76.64917034285715,
+        10.767596642857143
+      ],
+      "source": "https://www.openstreetmap.org/way/203321867",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "bus-palakkad",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "way-241740100",
+      "name": "Thrissur KSRTC Bus Station",
+      "localName": "തൃശൂർ ബസ് സ്റ്റേഷൻ",
+      "district": "thrissur",
+      "coordinate": [
+        76.2105222117647,
+        10.51768865882353
+      ],
+      "source": "https://www.openstreetmap.org/way/241740100",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "station-thrissur",
+      "reference": "https://onlineksrtcswift.com/contact_us",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-515186050",
+      "name": "Vadakke chira bus hub",
+      "localName": "വടക്കേസ്റ്റാന്റ്",
+      "district": "thrissur",
+      "coordinate": [
+        76.21469047272727,
+        10.530564772727272
+      ],
+      "source": "https://www.openstreetmap.org/way/515186050",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "thrissur",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-1166965746",
+      "name": "Guruvayur Private Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "thrissur",
+      "coordinate": [
+        76.0438602,
+        10.5933319
+      ],
+      "source": "https://www.openstreetmap.org/node/1166965746",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "station-thrissur-guruvayur",
+      "verifiedAt": "2026-10-23",
+      "type": "private_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-931648255",
+      "name": "Guruvayur KSRTC Bus Stand",
+      "localName": "കെ എസ് ആർ ടി സി ബസ് സ്റ്റാൻഡ്",
+      "district": "thrissur",
+      "coordinate": [
+        76.03760736538462,
+        10.595730026923077
+      ],
+      "source": "https://www.openstreetmap.org/way/931648255",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "station-thrissur-guruvayur",
+      "reference": "https://onlineksrtcswift.com/contact_us",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-11273823811",
+      "name": "Airport Feeder Bus Stop",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "ernakulam",
+      "coordinate": [
+        76.3496575,
+        10.1094731
+      ],
+      "source": "https://www.openstreetmap.org/node/11273823811",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-aluva",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-641817282",
+      "name": "Aluva Private Bus Stand",
+      "localName": "ആലുവ പ്രൈവറ്റ് ബസ്സ് സ്റ്റാന്റ്",
+      "district": "ernakulam",
+      "coordinate": [
+        76.35091999375,
+        10.1083813
+      ],
+      "source": "https://www.openstreetmap.org/way/641817282",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-aluva",
+      "verifiedAt": "2026-10-23",
+      "type": "private_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-289607455",
+      "name": "Palayam Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kozhikode",
+      "coordinate": [
+        75.784203,
+        11.249439
+      ],
+      "source": "https://www.openstreetmap.org/node/289607455",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kozhikode",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-206995109",
+      "name": "Kozhikode Moffusil Bus Stand",
+      "localName": "പുതിയ ബസ്സ് സ്റ്റാന്റ്",
+      "district": "kozhikode",
+      "coordinate": [
+        75.7867447076923,
+        11.258707446153846
+      ],
+      "source": "https://www.openstreetmap.org/way/206995109",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kozhikode",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-362568122",
+      "name": "Palayam Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kozhikode",
+      "coordinate": [
+        75.78434541111112,
+        11.249367644444444
+      ],
+      "source": "https://www.openstreetmap.org/way/362568122",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kozhikode",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-836324193",
+      "name": "Kozhikode KSRTC Bus Terminal",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kozhikode",
+      "coordinate": [
+        75.78240502,
+        11.25943574
+      ],
+      "source": "https://www.openstreetmap.org/way/836324193",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "kozhikode",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "node-2592394225",
+      "name": "Kannur Government Hospital Private Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kannur",
+      "coordinate": [
+        75.3713982,
+        11.8619489
+      ],
+      "source": "https://www.openstreetmap.org/node/2592394225",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kannur",
+      "verifiedAt": "2026-10-23",
+      "type": "private_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-45765966",
+      "name": "Thavakkara New Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kannur",
+      "coordinate": [
+        75.37143052608695,
+        11.866555891304348
+      ],
+      "source": "https://www.openstreetmap.org/way/45765966",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kannur",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-45766211",
+      "name": "Old Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kannur",
+      "coordinate": [
+        75.3658915861111,
+        11.875961977777777
+      ],
+      "source": "https://www.openstreetmap.org/way/45766211",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kannur",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-801891931",
+      "name": "Kannur HQ Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kannur",
+      "coordinate": [
+        75.3714639235294,
+        11.862218894117646
+      ],
+      "source": "https://www.openstreetmap.org/way/801891931",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kannur",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-924858639",
+      "name": "Kannur KSRTC Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kannur",
+      "coordinate": [
+        75.3745361,
+        11.875269244444445
+      ],
+      "source": "https://www.openstreetmap.org/way/924858639",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "kannur",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "way-1130704371",
+      "name": "Kannur Old Bus stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kannur",
+      "coordinate": [
+        75.36590549285714,
+        11.876096378571429
+      ],
+      "source": "https://www.openstreetmap.org/way/1130704371",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kannur",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-757514180",
+      "name": "Ernakulam Boat Jetty",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "ernakulam",
+      "coordinate": [
+        76.2792487,
+        9.972830155555556
+      ],
+      "source": "https://www.openstreetmap.org/way/757514180",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-ernakulam",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-804822738",
+      "name": "KSRTC Bus Station Ernakulam",
+      "localName": "എറണാകുളം ബസ് സ്റ്റാൻഡ്",
+      "district": "ernakulam",
+      "coordinate": [
+        76.28902620666666,
+        9.977291946666666
+      ],
+      "source": "https://www.openstreetmap.org/way/804822738",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "bus-ernakulam",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "node-8788724490",
+      "name": "Old Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kottayam",
+      "coordinate": [
+        76.5214253,
+        9.5905855
+      ],
+      "source": "https://www.openstreetmap.org/node/8788724490",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kottayam",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-9365045366",
+      "name": "KSRTC Kottayam",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kottayam",
+      "coordinate": [
+        76.523438,
+        9.5858048
+      ],
+      "source": "https://www.openstreetmap.org/node/9365045366",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "kottayam",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "way-402091474",
+      "name": "കോട്ടയം കെ.എസ്.ആർ.ടി.സി. ബസ് ടെർമിനൽ",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kottayam",
+      "coordinate": [
+        76.52387539375,
+        9.58548295
+      ],
+      "source": "https://www.openstreetmap.org/way/402091474",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kottayam",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-1238325724",
+      "name": "Nagampadam Bus stand",
+      "localName": "നാഗമ്പടം ബസ് സ്റ്റാൻഡ്",
+      "district": "kottayam",
+      "coordinate": [
+        76.52823096666667,
+        9.596003716666667
+      ],
+      "source": "https://www.openstreetmap.org/way/1238325724",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "kottayam",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-11064301105",
+      "name": "Thampanoor central",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "thiruvananthapuram",
+      "coordinate": [
+        76.9520403,
+        8.4882482
+      ],
+      "source": "https://www.openstreetmap.org/node/11064301105",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-thampanoor",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-13583998401",
+      "name": "Megha Bus (Cochin and Munnar)",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "thiruvananthapuram",
+      "coordinate": [
+        76.9539536,
+        8.4911067
+      ],
+      "source": "https://www.openstreetmap.org/node/13583998401",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-thampanoor",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-649459143",
+      "name": "Shaktan Thampuran Private Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "thrissur",
+      "coordinate": [
+        76.21461646666667,
+        10.515288983333333
+      ],
+      "source": "https://www.openstreetmap.org/way/649459143",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-sakthan",
+      "verifiedAt": "2026-10-23",
+      "type": "private_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-354065017",
+      "name": "East Fort",
+      "localName": "കിഴക്കേകോട്ട",
+      "district": "thiruvananthapuram",
+      "coordinate": [
+        76.9474622,
+        8.4834042
+      ],
+      "source": "https://www.openstreetmap.org/node/354065017",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-east-fort",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-256426212",
+      "name": "Andamukkam Private Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kollam",
+      "coordinate": [
+        76.58915725714284,
+        8.883120328571428
+      ],
+      "source": "https://www.openstreetmap.org/way/256426212",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-kollam",
+      "verifiedAt": "2026-10-23",
+      "type": "private_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-922190214",
+      "name": "Kollam KSRTC Bus Station",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kollam",
+      "coordinate": [
+        76.5850198,
+        8.891019539999998
+      ],
+      "source": "https://www.openstreetmap.org/way/922190214",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "bus-kollam",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "node-2897254089",
+      "name": "Pathanamthitta KSRTC bus stand",
+      "localName": "പത്തനംതിട്ട കെ.എസ്.ആർ.ടി.സി. ബസ് സ്റ്റാന്റ്",
+      "district": "pathanamthitta",
+      "coordinate": [
+        76.7895169,
+        9.2671433
+      ],
+      "source": "https://www.openstreetmap.org/node/2897254089",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "bus-pathanamthitta",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "way-337923539",
+      "name": "Pathanamthitta KSRTC bus stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "pathanamthitta",
+      "coordinate": [
+        76.78939082857143,
+        9.26723107142857
+      ],
+      "source": "https://www.openstreetmap.org/way/337923539",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "bus-pathanamthitta",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "way-799123939",
+      "name": "Pathanamthitta Municipal Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "pathanamthitta",
+      "coordinate": [
+        76.79093302857143,
+        9.266672142857143
+      ],
+      "source": "https://www.openstreetmap.org/way/799123939",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-pathanamthitta",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-799123942",
+      "name": "Old Private Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "pathanamthitta",
+      "coordinate": [
+        76.78675877142857,
+        9.265834514285714
+      ],
+      "source": "https://www.openstreetmap.org/way/799123942",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-pathanamthitta",
+      "verifiedAt": "2026-10-23",
+      "type": "private_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-3951434588",
+      "name": "Alappuzha Railway Station",
+      "localName": "ആലപ്പുഴ റെയിൽവേ സ്റ്റേഷൻ",
+      "district": "alappuzha",
+      "coordinate": [
+        76.3226246,
+        9.4850082
+      ],
+      "source": "https://www.openstreetmap.org/node/3951434588",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-alappuzha",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-649481258",
+      "name": "Alappuzha Private Bus stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "alappuzha",
+      "coordinate": [
+        76.3361762,
+        9.49997908
+      ],
+      "source": "https://www.openstreetmap.org/way/649481258",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-alappuzha",
+      "verifiedAt": "2026-10-23",
+      "type": "private_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-1240004287",
+      "name": "Alappuzha Railway Station Bus Stand",
+      "localName": "ആലപ്പുഴ റെയിൽവേ സ്റ്റേഷൻ ബസ് സ്റ്റാൻഡ്",
+      "district": "alappuzha",
+      "coordinate": [
+        76.32270058571429,
+        9.484978957142857
+      ],
+      "source": "https://www.openstreetmap.org/way/1240004287",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-alappuzha",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-2916974293",
+      "name": "Mangattukavala Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "idukki",
+      "coordinate": [
+        76.7248837,
+        9.9026373
+      ],
+      "source": "https://www.openstreetmap.org/node/2916974293",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-thodupuzha",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-6897397549",
+      "name": "mangatukavala",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "idukki",
+      "coordinate": [
+        76.7204228,
+        9.9077872
+      ],
+      "source": "https://www.openstreetmap.org/node/6897397549",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-thodupuzha",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-8396443668",
+      "name": "mangattukavala bus stop",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "idukki",
+      "coordinate": [
+        76.7248112,
+        9.9026347
+      ],
+      "source": "https://www.openstreetmap.org/node/8396443668",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-thodupuzha",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-8411932471",
+      "name": "mangattukavala bus stop",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "idukki",
+      "coordinate": [
+        76.7209022,
+        9.9076731
+      ],
+      "source": "https://www.openstreetmap.org/node/8411932471",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-thodupuzha",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-835773583",
+      "name": "KSRTC Terminal Thodupuzha Complex",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "idukki",
+      "coordinate": [
+        76.71562915714286,
+        9.894498342857144
+      ],
+      "source": "https://www.openstreetmap.org/way/835773583",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "bus-thodupuzha",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "way-836159837",
+      "name": "Muncipal Bus Termial Thodupuzha",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "idukki",
+      "coordinate": [
+        76.70812116666667,
+        9.893732866666667
+      ],
+      "source": "https://www.openstreetmap.org/way/836159837",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-thodupuzha",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-1026012346",
+      "name": "KSRTC BUS STAND",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "idukki",
+      "coordinate": [
+        76.71567998333333,
+        9.894572266666666
+      ],
+      "source": "https://www.openstreetmap.org/way/1026012346",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "bus-thodupuzha",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "way-181286348",
+      "name": "KSRTC Garage Palakkad",
+      "localName": "കെ എസ്സ് ആർ ടി സി ഗരാജ് പാലക്കാട്",
+      "district": "palakkad",
+      "coordinate": [
+        76.6493976875,
+        10.76720485
+      ],
+      "source": "https://www.openstreetmap.org/way/181286348",
+      "fidelity": "C",
+      "status": "Facility listed in the operator directory checked 2026-10-23; not a live operating-status or timetable feed",
+      "tile": "bus-palakkad",
+      "verifiedAt": "2026-10-23",
+      "type": "public_terminal",
+      "verification": "OSM facility identity and district checked; original procedural architecture",
+      "reference": "https://onlineksrtcswift.com/contact_us"
+    },
+    {
+      "id": "way-192484155",
+      "name": "Town Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "palakkad",
+      "coordinate": [
+        76.65172332857142,
+        10.770905414285716
+      ],
+      "source": "https://www.openstreetmap.org/way/192484155",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-palakkad",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-192490628",
+      "name": "Stadium Bus Stand",
+      "localName": "സ്റ്റേഡിയം ബസ് സ്റ്റാൻഡ്",
+      "district": "palakkad",
+      "coordinate": [
+        76.6626046,
+        10.773927155555555
+      ],
+      "source": "https://www.openstreetmap.org/way/192490628",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-palakkad",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-3883265125",
+      "name": "മലപ്പുറം കെ.എസ്.ആർ.ടി.സി",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "malappuram",
+      "coordinate": [
+        76.0800732,
+        11.0425516
+      ],
+      "source": "https://www.openstreetmap.org/node/3883265125",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-malappuram",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-801583551",
+      "name": "mallapuram muncipal bus stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "malappuram",
+      "coordinate": [
+        76.07613376,
+        11.04418077
+      ],
+      "source": "https://www.openstreetmap.org/way/801583551",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-malappuram",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-34416321",
+      "name": "Kalpetta New Bus stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "wayanad",
+      "coordinate": [
+        76.08441115625,
+        11.6055121375
+      ],
+      "source": "https://www.openstreetmap.org/way/34416321",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-kalpetta",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-386991360",
+      "name": "Kalpetta Old Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "wayanad",
+      "coordinate": [
+        76.08300872857144,
+        11.613371071428572
+      ],
+      "source": "https://www.openstreetmap.org/way/386991360",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-kalpetta",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-1080684023",
+      "name": "Kasaragod Muncipal Bus stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "kasaragod",
+      "coordinate": [
+        74.9942898,
+        12.5068621
+      ],
+      "source": "https://www.openstreetmap.org/node/1080684023",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-kasaragod",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "node-8334434124",
+      "name": "kunnamkulam bus stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "thrissur",
+      "coordinate": [
+        76.0697256,
+        10.6508456
+      ],
+      "source": "https://www.openstreetmap.org/node/8334434124",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-kunnamkulam",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-377134839",
+      "name": "Municipal Bus Stand Kunnamkulam",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "thrissur",
+      "coordinate": [
+        76.07012206249999,
+        10.650582074999999
+      ],
+      "source": "https://www.openstreetmap.org/way/377134839",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-kunnamkulam",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-972180156",
+      "name": "Kunnamkulam New Bus Stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "thrissur",
+      "coordinate": [
+        76.06718443043478,
+        10.649287639130435
+      ],
+      "source": "https://www.openstreetmap.org/way/972180156",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-kunnamkulam",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "way-1255176867",
+      "name": "Kunnamkulam bus stand",
+      "localName": "ബസ് സ്റ്റേഷൻ",
+      "district": "thrissur",
+      "coordinate": [
+        76.06716616111112,
+        10.649399588888889
+      ],
+      "source": "https://www.openstreetmap.org/way/1255176867",
+      "fidelity": "C",
+      "status": "Mapped bus terminal; live operating status and schedules not verified",
+      "tile": "bus-kunnamkulam",
+      "verifiedAt": "2026-10-23",
+      "type": "bus_station",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    },
+    {
+      "id": "relation-17712257",
+      "name": "Vyttila Mobility Hub",
+      "localName": "വൈറ്റില മൊബിലിറ്റി ഹബ്",
+      "district": "ernakulam",
+      "coordinate": [
+        76.3217772,
+        9.9685632
+      ],
+      "source": "https://www.openstreetmap.org/relation/17712257",
+      "reference": "https://www.vyttilamobilityhub.com/bus-timing",
+      "fidelity": "C",
+      "status": "Published facility reference; schedules simulated, not live",
+      "tile": "vyttila-hub",
+      "verifiedAt": "2026-10-23",
+      "type": "mobility_hub",
+      "verification": "OSM facility identity and district checked; original procedural architecture"
+    }
+  ],
+  "routes": [
+    {
+      "id": "thrissur-guruvayur",
+      "from": "way-241740100",
+      "to": "way-931648255",
+      "file": "bus-route-thrissur-guruvayur.json",
+      "distance": 26327.4,
+      "source": "https://router.project-osrm.org/route/v1/driving/76.2105222117647,10.51768865882353;76.03760736538462,10.595730026923077?overview=full&geometries=geojson&steps=true&annotations=nodes",
+      "simulation": true
+    },
+    {
+      "id": "ernakulam-aluva",
+      "from": "relation-17712257",
+      "to": "way-641817282",
+      "file": "bus-route-ernakulam-aluva.json",
+      "distance": 18125.4,
+      "source": "https://router.project-osrm.org/route/v1/driving/76.3217772,9.9685632;76.35091999375,10.1083813?overview=full&geometries=geojson&steps=true&annotations=nodes",
+      "simulation": true
+    },
+    {
+      "id": "thrissur-ernakulam",
+      "from": "way-241740100",
+      "to": "way-804822738",
+      "file": "bus-route-thrissur-ernakulam.json",
+      "distance": 76571.6,
+      "source": "https://router.project-osrm.org/route/v1/driving/76.2105222117647,10.51768865882353;76.28902620666666,9.977291946666666?overview=full&geometries=geojson&steps=true&annotations=nodes",
+      "simulation": true
+    },
+    {
+      "id": "kozhikode-kannur",
+      "from": "way-836324193",
+      "to": "way-924858639",
+      "file": "bus-route-kozhikode-kannur.json",
+      "distance": 92394.9,
+      "source": "https://router.project-osrm.org/route/v1/driving/75.78240502,11.25943574;75.3745361,11.875269244444445?overview=full&geometries=geojson&steps=true&annotations=nodes",
+      "simulation": true
+    },
+    {
+      "id": "kottayam-ernakulam",
+      "from": "node-9365045366",
+      "to": "way-804822738",
+      "file": "bus-route-kottayam-ernakulam.json",
+      "distance": 66893.9,
+      "source": "https://router.project-osrm.org/route/v1/driving/76.523438,9.5858048;76.28902620666666,9.977291946666666?overview=full&geometries=geojson&steps=true&annotations=nodes",
+      "simulation": true
+    }
+  ]
+}

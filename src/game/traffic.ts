@@ -6,6 +6,8 @@ import type { Road } from "./navigation";
 import type { Vec2 } from "../types";
 import { World } from "./world";
 import { toLocal } from "../data/geography";
+import { RailShuttle } from "./rail";
+import { projectRoute, routeLengths, sampleRoute } from "./bus";
 
 export interface TrafficAgent {
   model: VehicleModel;
@@ -28,6 +30,7 @@ export class TrafficManager {
   pedestrians: Pedestrian[] = [];
   root = new THREE.Group();
   train?: THREE.Group;
+  rail?: RailShuttle;
   private trainPoints: Vec2[] = [];
   private trainDistance = 0;
   private trainLength = 0;
@@ -35,6 +38,7 @@ export class TrafficManager {
   private agentDwellUntil = new Map<TrafficAgent, number>();
   private trainDwellUntil = 0;
   private stationPositions: Vec2[] = [];
+  private relocationTime=0;
   constructor(public world: World) {
     world.scene.add(this.root);
     const rng = seeded(world.region.id.length * 1821),
@@ -139,11 +143,16 @@ export class TrafficManager {
       this.root.add(human.root);
       break;
     }
-    const rail =
-      world.railways.find((p) => p.length > 3) ??
-      world.metroTracks.find((p) => p.length > 3);
+    const stations=world.localFeatures.filter(f=>["station","halt","stop"].includes(f.source.tags.railway)||f.source.tags.public_transport==="station").map(f=>({point:f.center,name:f.source.tags["name:en"]??f.source.tags.name??"Mapped station"}));
+    if(world.region.theme==="station")stations.unshift({point:world.landmarkPosition,name:world.region.landmark});
+    const alignments=[...world.railways,...world.metroTracks].filter(p=>p.length>2&&routeLengths(p).at(-1)!>90);
+    const rail=alignments.sort((a,b)=>{
+      const separation=(p:Vec2[])=>Math.min(...stations.map(s=>projectRoute(s.point,p,routeLengths(p)).separation),Infinity);
+      return separation(a)-separation(b);
+    })[0];
     this.trainAltitude = world.railways.includes(rail ?? []) ? 0 : 7.5;
     if (rail && world.region.id !== "idukki" && world.region.id !== "wayanad") {
+      this.rail=new RailShuttle(rail,stations);
       this.trainPoints = rail;
       this.trainLength = rail
         .slice(1)
@@ -151,10 +160,18 @@ export class TrafficManager {
       this.train = new THREE.Group();
       for (let i = 0; i < 3; i++) {
         const coach = new THREE.Group();
-        box(coach, material(i ? "#b3b7a3" : "#955644"), 0, 1.8, 0, 2.8, 3, 13);
-        for (let z = -5; z < 6; z += 2)
-          for (const x of [-1.42, 1.42])
-            box(coach, material("#3a4a4c"), x, 2.2, z, 0.05, 0.9, 1.1);
+        const body=material(i ? "#b3b7a3" : "#955644");
+        box(coach,material("#5d5c53"),0,1,0,2.8,.2,13);
+        box(coach,body,0,3.35,0,2.9,.2,13);
+        for (const x of [-1.42,1.42]) {
+          box(coach,body,x,1.55,0,.08,1,13);
+          for(let z=-6.4;z<6.5;z+=1.6)box(coach,body,x,2.65,z,.08,1.3,.1);
+        }
+        for(const z of [-6.5,6.5])box(coach,body,0,1.6,z,2.8,1.1,.1);
+        for(let z=-4.5;z<5;z+=1.7)for(const x of [-.85,.85]){
+          box(coach,material("#476778"),x,1.5,z,.9,.2,.8);
+          box(coach,material("#476778"),x,1.95,z+.35,.9,.8,.12);
+        }
         coach.position.z = i * 14;
         this.train.add(coach);
       }
@@ -207,6 +224,18 @@ export class TrafficManager {
     }
   }
   update(dt: number, time: number, player: Vec2) {
+    if(time>this.relocationTime){
+      this.relocationTime=time+2;
+      const nearest=this.world.network.nearest(player);
+      if(nearest){
+        for(const [index,agent] of this.agents.entries())if(distance(agent.model.root.position,player)>550){
+          const road=nearest.road;
+          const choices=road.points.map((p,i)=>({p,i})).filter(({p,i})=>i>0&&distance(p,player)>190&&distance(p,player)<320);
+          const target=choices[(index*7)%choices.length];
+          if(target){agent.road=road;agent.segment=target.i;agent.t=.5;agent.direction=road.oneway?1:index%2?1:-1;this.agentDwellUntil.delete(agent);}
+        }
+      }
+    }
     for (const agent of this.agents) {
       const { road, model } = agent;
       let a = road.points[agent.segment - 1],
@@ -309,46 +338,13 @@ export class TrafficManager {
       p.human.root.visible =
         valid && distance(player, p.human.root.position) < 180;
     }
-    if (this.train && this.trainLength > 50) {
-      const trainPos = this.train.children[0]?.position;
-      const atStation =
-        trainPos &&
-        this.stationPositions.some(
-          (s) => distance({ x: trainPos.x, z: trainPos.z }, s) < 24,
-        );
-      const stationDwellActive = (this.trainDwellUntil ?? 0) > time;
-      if (atStation && !stationDwellActive && !this.trainDwellUntil) {
-        this.trainDwellUntil = time + 6;
-      }
-      if (time >= (this.trainDwellUntil ?? 0) && !atStation)
-        this.trainDwellUntil = 0;
-      const pause = (this.trainDwellUntil ?? 0) > time;
-
-      if (!pause)
-        this.trainDistance = (this.trainDistance + dt * 8) % this.trainLength;
-      for (let c = 0; c < this.train.children.length; c++) {
-        let d = (this.trainDistance + c * 14) % this.trainLength;
-        for (let i = 1; i < this.trainPoints.length; i++) {
-          const a = this.trainPoints[i - 1],
-            b = this.trainPoints[i],
-            len = distance(a, b);
-          if (d <= len) {
-            const t = d / len,
-              x = a.x + (b.x - a.x) * t,
-              z = a.z + (b.z - a.z) * t;
-            this.train.children[c].position.set(
-              x,
-              this.world.height(x, z) + 0.25 + this.trainAltitude,
-              z,
-            );
-            this.train.children[c].rotation.y = Math.atan2(
-              a.x - b.x,
-              -b.z + a.z,
-            );
-            break;
-          }
-          d -= len;
-        }
+    if (this.train && this.rail) {
+      this.rail.update(dt);
+      for (let c=0;c<this.train.children.length;c++) {
+        const pose=sampleRoute(this.rail.points,this.rail.lengths,Math.max(0,this.rail.distance-c*14));
+        const model=this.train.children[c];
+        model.position.set(pose.x,this.world.height(pose.x,pose.z)+.25+this.trainAltitude,pose.z);
+        model.rotation.y=-pose.yaw;
       }
     }
   }

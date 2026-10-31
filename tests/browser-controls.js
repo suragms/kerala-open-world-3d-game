@@ -100,11 +100,11 @@ async (page) => {
   });
   await page.getByRole("button", { name: "Save game", exact: true }).click();
   const save = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("kow.save.v1")),
+    JSON.parse(localStorage.getItem("kow.save.v2")),
   );
   check(
     "Save preserves avatar and region",
-    save.version === 1 &&
+    save.version === 2 &&
       save.region === "thrissur" &&
       save.avatar.gender === "female",
     save,
@@ -146,6 +146,6 @@ async (page) => {
   await page
     .getByRole("button", { name: "Resume journey", exact: false })
     .click();
-  await page.screenshot({ path: "output/playwright/05-tested-controls.png" });
+  await page.screenshot({ path: "output/playwright/phase8-suite/05-tested-controls.png" });
   return { results, performance: await state() };
 }

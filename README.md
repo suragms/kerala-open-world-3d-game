@@ -1,139 +1,71 @@
 # Kerala Open World
 
-An original browser exploration prototype built with React, TypeScript, Vite, and Three.js. It features **27 playable local areas across all 14 Kerala districts**, sourced OpenStreetMap roads and building footprints, character customization, walking, driving, public transport systems, weather, dynamic world streaming, and local saves.
+A browser exploration game built with React, TypeScript, Three.js and Vite. The geographic register preserves 14 Kerala districts, 3,435 sourced places, 181 railway station records and four airports. There are 41 imported local areas and five continuous passenger-bus corridors. A place record is not a claim of a fully modeled 3D destination.
 
-> **Disclaimer:** This is not a complete, photorealistic reconstruction of Kerala. Coordinates and road/building footprints are sourced; humans, architecture, vegetation, and terrain are procedural interpretations. Read [the verified implementation report](VERIFIED_IMPLEMENTATION_REPORT.md) for exact coverage, tests, and technical details.
+The visuals are original, stylized game assets. Landmark and terminal architecture is classified **C: procedural approximation**. Geographic records and footprints are **B: geographic reconstruction**. No Level A exterior or photorealistic replica is claimed. Terrain uses attributed 80 m local / 160 m corridor elevation grids, with coarse-source limitations.
 
----
+## Run locally
 
-## 🚀 Key Features
+Use Node.js 22.12 or newer and a WebGL2 browser.
 
-- **All 14 Kerala Districts**: Thiruvananthapuram, Kollam, Pathanamthitta, Alappuzha, Kottayam, Idukki, Ernakulam, Thrissur, Palakkad, Malappuram, Kozhikode, Wayanad, Kannur, and Kasaragod.
-- **Recognizable Landmarks**: Swaraj Round and Vadakkunnathan Temple (Thrissur), Lulu Mall and Marine Drive (Kochi), Kovalam & Varkala cliffs, Alappuzha backwaters, Munnar tea hills, Palakkad Fort, Kozhikode Beach, Bekal & Kannur Forts.
-- **Character Studio**: Male and female playable avatars with custom skin tones, hairstyles, and clothing/footwear palettes.
-- **Multiple Control Schemes**:
-  - Arrow keys / WASD (smooth walking, running with Shift, jumping, interacting with E).
-  - Mouse movement (click-to-move, continuous cursor follow, right-drag camera orbit, scroll zoom).
-  - Vehicle driving (acceleration, progressive braking, steering, handbrake, speedometer, chase camera).
-- **Interactive Transportation**: District buses, railway networks (with station-aware train dwelling and canopies), and international airports (TRV, CCJ, COK, CNN) with Dijkstra-based journey estimates.
-- **Environmental Immersion**: Dynamic time of day (morning, afternoon, evening, night), weather presets (clear, rainy, monsoon), procedural coconut/banana palms, Kerala-style houses, bridges, and backwaters.
-- **Performance Optimized**: Four quality presets (`low`, `medium`, `high`, `ultra`) with a dedicated lightweight mode optimized for laptops with approximately 4 GB RAM.
-
----
-
-## 🛠️ Technology Stack
-
-- **Framework**: React 19, TypeScript 5.9
-- **Bundler**: Vite 7.1
-- **3D Graphics**: Three.js 0.180
-- **Testing**: Node.js built-in test runner (`tsx --test`), Playwright browser workflows
-- **GIS Data**: GeoBoundaries ODbL district boundaries, OpenStreetMap road and place extracts
-
----
-
-## 💻 System & Installation Requirements
-
-- **Node.js**: Version 22.12+ or 24 recommended.
-- **RAM**: 4 GB minimum (optimized low quality preset available for low-spec laptops).
-- **Browser**: Modern WebGL2-compatible browser (Chrome, Edge, Firefox, Safari).
-
-### Windows Installation Instructions
-
-1. Install [Node.js](https://nodejs.org/) (v22.12+).
-2. Open PowerShell or Command Prompt in the project directory:
-   ```powershell
-   cd "C:\Users\SURAG\Documents\my-project\KERALA OPEN WORLD — Realistic 3D Exploration Simulator"
-   ```
-3. Install dependencies:
-   ```powershell
-   npm install
-   ```
-
----
-
-## 🏃‍♂️ Development & Production Commands
-
-### Start Development Server
 ```powershell
+npm install
 npm run dev -- --port 5173
 ```
-Open [http://127.0.0.1:5173/](http://127.0.0.1:5173/) in your browser. Choose an avatar, customize appearance, select a district or imported transport area, and explore.
 
-### Production Build & Preview
+Open [the local game](http://127.0.0.1:5173/), select an avatar and choose a starting district. Low graphics reduces the draw distance, vegetation, traffic, passengers and rendering resolution. Performance depends on the machine; a 4 GB laptop has not been independently benchmarked.
+
 ```powershell
 npm run build
-npm run preview -- --port 4173
-```
-
-### Run Tests & Validation
-```powershell
 npm test
 npm run data:validate
+npm run test:browser
 ```
 
----
+The browser suite expects the development server on port 5173. It starts each workflow through the normal character-selection interface. Long bus and rail checks advance the normal simulation with a development-only deterministic clock; those checks are not real-time FPS benchmarks.
 
-## 🎮 Control Scheme
+## Controls
 
-| Action | Control (Keyboard / Mouse) |
-|---|---|
-| **Walk / Drive Move** | Arrow keys or WASD (relative to camera) |
-| **Run** | Shift (on foot) |
-| **Jump / Handbrake** | Space |
-| **Interact / Board Transport** | E |
-| **Camera Orbit** | Right mouse drag |
-| **Camera Zoom** | Mouse wheel |
-| **Change Camera Distance** | C |
-| **World Map** | M |
-| **Pause / Menu** | Escape |
-| **Mouse Walking** | Select *Mouse movement* in HUD; click or hold ground |
-| **Mouse Driving** | Enable *Mouse steering* in Settings; move horizontally to steer, hold left to accelerate, right to brake |
+| Action | Mouse | Keyboard | Standard controller |
+|---|---|---|---|
+| Walk | Choose Mouse movement; click or hold valid ground | Arrows / WASD | Left stick |
+| Run / jump | Run / Jump buttons; double-click a ground destination to run | Shift / Space | Left-stick click / bottom face |
+| Look / zoom | Right drag / wheel | C cycles camera | Right stick / top face cycles camera |
+| Interact / enter / exit | Click object or HUD prompt | E | Left face |
+| Drive | Hold left to accelerate, right to brake, horizontal position to steer | Arrows / WASD | Left stick, right / left triggers |
+| Handbrake / reverse | HUD buttons | Space / hold backward after stopping | Bottom face / HUD gear button |
+| Map / pause / transport | HUD buttons | M / Escape / T | Select / Start / left shoulder |
+| Menus | Click controls | Tab / Enter | D-pad focus, bottom face select, right face close; left / right adjusts a focused dropdown |
 
----
+Settings includes keyboard and controller remapping, analog dead zones, steering sensitivity and assistance, camera preferences and bus dwell time. Controller vibration depends on browser and hardware support. Tests inject the Gamepad API; physical controllers require a separate hardware check.
 
-## 🗺️ Supported Districts & Regions
+## Passenger journeys
 
-1. **Thiruvananthapuram** (Capital & Kovalam/Varkala coast, TRV airport)
-2. **Kollam** (Ashtamudi backwaters & town)
-3. **Pathanamthitta** (Hill terrain & pilgrimage routes)
-4. **Alappuzha** (Backwater canals & beach)
-5. **Kottayam** (Rubber hills & backwater town)
-6. **Idukki** (High Range Munnar hills & dams — road access only)
-7. **Ernakulam** (Kochi urban center, COK airport, metro/rail)
-8. **Thrissur** (Swaraj Round, Vadakkunnathan Temple, rail station)
-9. **Palakkad** (Palakkad Gap, agricultural plains, fort)
-10. **Malappuram** (CCJ airport, coastal roads)
-11. **Kozhikode** (Historic trade port & beach)
-12. **Wayanad** (Western Ghats mountain roads — road access only)
-13. **Kannur** (Northern coast, CNN airport, fort)
-14. **Kasaragod** (Northern hills & Bekal Fort)
+Walk to a departure station, choose a simulated service, wait for its bus to approach and stop, walk to the passenger door, board and choose a free seat. Full Journey follows a continuous road track with intermediate stops. Requesting the next stop holds the stopped bus for a safe exit. Fast Journey has an explicit transition and records the skipped trip separately.
 
----
+Imported corridors:
 
-## ⚙️ Graphics Settings & Performance Presets
+- Thrissur → Guruvayur
+- Thrissur → Ernakulam
+- Vyttila → Aluva
+- Kozhikode → Kannur
+- Kottayam → Ernakulam
 
-- **Ultra / High**: Full 2048px soft shadows, high vegetation density, maximum draw distance, 60 FPS on dedicated desktop GPUs.
-- **Medium / Low (4GB RAM Laptop Mode)**: Reduced shadow map resolution (512px), lower pixel ratio clamp (0.8x), chunk distance limits, and lightweight particle density to ensure stable performance on modest hardware.
+These are **in-game services**, with no official route numbers or live timetables. Road geometry is OSM / OSRM derived. Rounded turning tracks are checked against imported building and water footprints, including sourced bridge crossings. The data does not certify legal bus access, road widths or surveyed bridge heights.
 
----
+The terminal register contains 59 mapped facilities across all districts, including Thrissur KSRTC, Sakthan private stand, Guruvayur, Kunnamkulam, Vyttila, Ernakulam, Aluva, Thampanoor and East Fort. Some public facilities are also listed in the operator's published directory; that is not a live operational-status feed. Terminal structures use original representative layouts.
 
-## 🔍 Troubleshooting
+Local train shuttles offer passenger, window and exterior cameras on supported imported rail segments, with boarding and exiting at mapped stations. Statewide rail travel and airport transfers use explicit scene transitions. Airport transfers have a short cinematic; aircraft controls and continuous statewide flights are not implemented.
 
-- **Black screen or WebGL error**: Ensure hardware acceleration is enabled in your browser and your graphics drivers are up to date.
-- **Stuck player**: Press Escape to open the pause menu and select *Recover / Respawn* or return to the district map.
-- **Port already in use**: Specify a different port using `-- --port <number>` (e.g., `npm run dev -- --port 5174`).
+## Data and verification
 
----
+- [Phase 8 implementation and verification record](PHASE8_IMPLEMENTATION_REPORT.md)
+- [Geographic validation](public/data/validation-report.json)
+- [Bus route audit](public/data/bus-route-audit.json)
+- [Fidelity register](public/data/fidelity-register.json)
+- [Attribution and source limitations](public/data/NOTICE.md)
+- [Historical baseline report](VERIFIED_IMPLEMENTATION_REPORT.md)
 
-## 📦 Data Attribution & Asset Licenses
+To rebuild bus driving tracks after reimporting source roads, run `npm run data:bus-tracks` before validation. The reproducible terminal, corridor scenery and elevation importers are in `scripts/`; raw downloads are cached in `output/phase8-source/`. Original geographic coordinates remain intact alongside derived driving tracks.
 
-- **District Boundaries**: geoBoundaries (Open Database License - ODbL).
-- **Roads, Buildings & Places**: OpenStreetMap contributors ([ODbL](https://www.openstreetmap.org/copyright)).
-- **Code & Assets**: Original implementation under project terms. No proprietary Google tiles, Street View, satellite imagery, or commercial assets are used.
-
----
-
-## 📄 Implementation Report Summary
-- **18 Automated Unit Tests**: Passing successfully (`npm test`).
-- **Geographic Data Validation**: 14 districts, 3,435 places verified (`npm run data:validate`).
-- **Build Status**: TypeScript and Vite production build verified with zero errors.
+Saves use version 2 with version 1 migration. An ongoing public-transport trip resumes on foot at its last safe checkpoint. Manual saves and 30-second autosaves include avatar, controls, camera, discoveries and bus history. Browser storage can be unavailable or cleared.

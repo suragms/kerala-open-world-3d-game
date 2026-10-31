@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import {
   TreePalm,
   ArrowRight,
@@ -21,6 +21,7 @@ import {
   Waves,
   Navigation,
   ExternalLink,
+  Plane,
 } from "lucide-react";
 import type {
   AvatarStyle,
@@ -30,6 +31,8 @@ import type {
   Region,
   Settings,
   Snapshot,
+  BusService,
+  BusType,
 } from "./types";
 import { DEFAULT_AVATAR } from "./types";
 import {
@@ -38,6 +41,8 @@ import {
   placesInRegion,
   toLocal,
   getAccuracyReport,
+  loadBusPlan,
+  toGeo,
 } from "./data/geography";
 import {
   readAvatar,
@@ -56,8 +61,192 @@ import { WorldMapPanel } from "./ui/WorldMapPanel";
 import { GameView } from "./ui/GameView";
 import { TransportPanel } from "./ui/TransportPanel";
 import type { GamePayload } from "./ui/GameView";
+import { startGamepadNavigation } from "./game/gamepad";
 
 type Screen = "home" | "character" | "location" | "game";
+
+// ── District theme colours (used in 3-D ring cards) ──────────────────────────
+const THEME_HUE: Record<string, string> = {
+  temple:   "#c1a96e",
+  beach:    "#4eb8c8",
+  backwater:"#6dbfa6",
+  tea:      "#8fc98a",
+  fishing:  "#6aabcc",
+  fort:     "#c4845e",
+  park:     "#82c47a",
+  dam:      "#7abcd4",
+};
+
+interface HomeScreenProps {
+  geography:        import("./types").Geography | null;
+  saved:            ReturnType<typeof import("./game/save").readSave>;
+  ml:               boolean;
+  onBegin:          () => void;
+  onContinue:       () => void;
+  onSelectDistrict: (id: string) => void;
+}
+
+function HomeScreen({ geography, saved, ml, onBegin, onContinue, onSelectDistrict }: HomeScreenProps) {
+  const regions = useMemo(() => geography?.regions ?? [], [geography]);
+  // track which card is "active" for the scroll-section spotlight
+  const [activeIdx, setActiveIdx] = useState(0);
+  const ringRef   = useRef<HTMLDivElement>(null);
+  const heroRef   = useRef<HTMLElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll parallax: hero content fades up as user scrolls down
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const t = el.scrollTop;
+      if (heroRef.current) {
+        heroRef.current.style.transform = `translateY(${t * 0.35}px)`;
+        heroRef.current.style.opacity   = String(Math.max(0, 1 - t / 400));
+      }
+      if (ringRef.current) {
+        ringRef.current.style.transform = `translateY(${t * 0.18}px)`;
+        ringRef.current.style.opacity   = String(Math.max(0, 1 - t / 520));
+      }
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Auto-rotate ring highlight every 3 s
+  useEffect(() => {
+    if (regions.length === 0) return;
+    const id = setInterval(() => setActiveIdx(i => (i + 1) % regions.length), 3000);
+    return () => clearInterval(id);
+  }, [regions.length]);
+
+  const COUNT = regions.length || 14;
+  const RADIUS = 340; // px, 3-D translateZ
+
+  return (
+    <div className="home-scroll-root" ref={scrollRef}>
+      {/* ── Section 1: hero viewport ──────────────────────────────────────── */}
+      <section className="home-hero-section">
+        <ScenePreview backdrop />
+        <div className="home-vignette" />
+
+        {/* Left — hero text */}
+        <main className="home-content" ref={heroRef}>
+          <div className="home-eyebrow">
+            <span className="status-dot" /> AN OPEN-WORLD JOURNEY THROUGH KERALA
+          </div>
+          <h1>
+            Some places
+            <br />
+            feel like <em>home.</em>
+          </h1>
+          <p className="home-subtitle">Explore God's Own Country.</p>
+          <p className="home-description">
+            From the quiet backwaters to the misty Ghats.<br />
+            Fourteen districts. Countless little discoveries.<br />
+            A whole world, waiting at your own pace.
+          </p>
+          <div className="home-actions">
+            <button
+              className="primary light-primary"
+              disabled={!geography}
+              onClick={onBegin}
+            >
+              {ml ? "യാത്ര തുടങ്ങാം" : "Begin your journey"}
+              <ArrowRight size={19} />
+            </button>
+            {saved && geography ? (
+              <button className="continue-button" onClick={onContinue}>
+                <Play size={15} /> Continue exploring
+              </button>
+            ) : null}
+          </div>
+          <div className="home-facts">
+            <span><Compass size={17} /><strong>14</strong> districts</span>
+            <i />
+            <span><Waves size={17} /> One beautiful state</span>
+            <i />
+            <span>Your own pace</span>
+          </div>
+        </main>
+
+        {/* Right — 3-D rotating district ring */}
+        <div className="district-ring-scene" ref={ringRef} aria-hidden="true">
+          <div className="district-ring" style={{ "--ring-count": COUNT } as React.CSSProperties}>
+            {regions.map((r, i) => {
+              const angle   = (i * 360) / COUNT;
+              const accent  = THEME_HUE[r.theme] ?? "#c1a96e";
+              const isActive = i === activeIdx;
+              return (
+                <button
+                  key={r.id}
+                  className={`district-card${isActive ? " is-active" : ""}`}
+                  style={{
+                    "--card-angle":  `${angle}deg`,
+                    "--card-radius": `${RADIUS}px`,
+                    "--card-accent": accent,
+                  } as React.CSSProperties}
+                  onClick={() => onSelectDistrict(r.id)}
+                  aria-label={`Explore ${r.name}`}
+                >
+                  <span className="dc-index">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="dc-name">{r.name}</span>
+                  <span className="dc-biome">{r.biome}</span>
+                  <span className="dc-landmark">{r.landmark}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* scroll cue */}
+        <div className="home-scroll-cue" aria-hidden="true">
+          <ChevronDown size={20} />
+        </div>
+
+        <footer className="home-footer">
+          <span>KERALA OPEN WORLD <i /> EXPLORATION BUILD 0.1</span>
+          <span><span className="status-dot" /> BUILT FOR THE WANDERER IN YOU</span>
+        </footer>
+      </section>
+
+      {/* ── Section 2: scrollable district detail cards ───────────────────── */}
+      <section className="home-districts-section">
+        <div className="hds-header">
+          <div className="home-eyebrow"><span className="status-dot" /> ALL FOURTEEN DISTRICTS</div>
+          <p className="hds-tagline">Choose where your story begins.</p>
+        </div>
+        <div className="hds-grid">
+          {regions.map((r, i) => {
+            const accent = THEME_HUE[r.theme] ?? "#c1a96e";
+            return (
+              <button
+                key={r.id}
+                className="hds-card"
+                style={{ "--card-accent": accent } as React.CSSProperties}
+                onClick={() => onSelectDistrict(r.id)}
+              >
+                <span className="hds-num">{String(i + 1).padStart(2, "0")}</span>
+                <span className="hds-name">{r.name}</span>
+                <span className="hds-town">{r.town}</span>
+                <span className="hds-biome">{r.biome}</span>
+                <span className="hds-landmark">{r.landmark}</span>
+                <span className="hds-desc">{r.description}</span>
+                <span className="hds-cta"><ArrowRight size={14} /> Explore</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="hds-footer">
+          <button className="primary light-primary" disabled={!geography} onClick={onBegin}>
+            {ml ? "ഏത് ജില്ലയിൽ നിന്ന് ആരംഭിക്കണം?" : "Let the journey choose for you"} <ArrowRight size={19} />
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 type Overlay =
   | "map"
   | "settings"
@@ -70,6 +259,7 @@ export default function App() {
   const [geography, setGeography] = useState<Geography | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(""),
+    [airTrip,setAirTrip] = useState<{from:string;to:string}|null>(null),
     [screen, setScreen] = useState<Screen>("home"),
     [overlay, setOverlay] = useState<Overlay>(null),
     [settings, setSettings] = useState(readSettings),
@@ -88,6 +278,14 @@ export default function App() {
     noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
     loadVersion = useRef(0);
   const ml = settings.language === "ml";
+  const inputState = useRef({ settings, screen, overlay });
+  inputState.current = { settings, screen, overlay };
+  useEffect(() => startGamepadNavigation(() => inputState.current.settings,
+    () => Boolean(engine.current && !engine.current.paused && !document.querySelector('[role="dialog"]')),
+    name => {
+      if (name === "closeMenu") setOverlay(null);
+      else if (engine.current) { engine.current.input.device="gamepad"; engine.current.action(name); }
+    }), []);
   const notify = useCallback((message: string) => {
     setNotice(message);
     clearTimeout(noticeTimer.current);
@@ -180,6 +378,7 @@ export default function App() {
     };
   }, [overlay]);
   const start = async (region: Region, place?: Place, continuing = false) => {
+    if ((engine.current?.bus?.attached || engine.current?.trainPassenger) && !continuing) { notify("Leave your transport at a stop before exploring another area. You can request a stop or use the bus Fast Journey."); return; }
     const version = ++loadVersion.current;
     setNotice("");
     clearTimeout(noticeTimer.current);
@@ -187,7 +386,8 @@ export default function App() {
     setLoading(`Travelling to ${region.town}…`);
     engine.current?.setPaused(true);
     try {
-      const tile = await loadTile(place?.tile ?? region.id);
+      const corridor = continuing && saved?.area?.startsWith("corridor-") ? geography?.busRoutes.find(r => `corridor-${r.id}` === saved.area) : undefined;
+      const tile = corridor && geography ? (await loadBusPlan(corridor, geography, "public")).tile : await loadTile(place?.tile ?? region.id);
       const activeRegion = place?.tile
         ? {
             ...region,
@@ -198,6 +398,7 @@ export default function App() {
             origin: tile.origin,
             theme: place.theme ?? region.theme,
             source: place.terminalSource ?? place.source,
+            asset: place.kind === "bus_station" ? "bus-terminal" : place.asset ?? region.asset,
           }
         : region;
       if (version !== loadVersion.current) return;
@@ -225,6 +426,8 @@ export default function App() {
           visited: save?.visited ?? [],
           discovered: save?.discovered ?? [],
           distance: save?.distance ?? 0,
+          journeys: save?.journeys,
+          discoveredStations: save?.discoveredStations,
           savedAt: new Date().toISOString(),
         };
       }
@@ -239,6 +442,8 @@ export default function App() {
         tile,
         avatar: selectedAvatar,
         save: save ?? undefined,
+        busStations: geography?.busStations,
+        boundaries: geography?.boundaries,
       });
       setScreen("game");
       setOverlay(null);
@@ -253,18 +458,45 @@ export default function App() {
       engine.current?.setPaused(false);
     }
   };
+  const bookBus = async (service: BusService, type: BusType) => {
+    const game = engine.current;
+    if (!game || !geography || game.bus?.attached || game.trainPassenger || game.driving) return;
+    const station = geography.busStations.find(s => s.id === service.from);
+    if (!station) return;
+    const waiting = game.terminals.stations.find(s => s.data.id === station.id)?.waiting;
+    if (!waiting || Math.hypot(game.position.x - waiting.x, game.position.z - waiting.z) > 28) {
+      setOverlay(null); game.setPaused(false);
+      if (waiting) { game.walkToDestination(waiting); notify(`Walk to ${station.name}. Select the service when you reach the waiting area.`); }
+      else notify("Use the map to explore the departure terminal before booking this bus.");
+      return;
+    }
+    const version = ++loadVersion.current;
+    setLoading("Preparing the sourced bus corridor…");
+    try {
+      const { plan, tile } = await loadBusPlan(service, geography, type);
+      if (version !== loadVersion.current) return;
+      const before = game.save(), coordinate = toGeo(game.position, game.world.tile.origin);
+      const save = { ...before, area: tile.id, position: toLocal(coordinate, tile.origin) };
+      setPayload({ region: game.region, tile, avatar: game.avatar, save, busPlan: plan, busStations: geography.busStations, boundaries: geography.boundaries });
+      setOverlay(null); setSnapshot(null); setLoading("");
+    } catch (e) { setLoading(""); setError(e instanceof Error ? e.message : "The bus corridor could not load."); }
+  };
   const action = useCallback(
     (name: string) => {
       if (name === "save") {
         saveGame();
         return;
       }
+      if (name === "arrivalSave") {
+        const save = engine.current?.save(); if (save && writeSave(save)) setSaved(save);
+        return;
+      }
       if (name === "mouse" || name === "arrows") {
-        setSettings((s) => ({ ...s, movement: name }));
+        setSettings((s) => ({ ...s, movement: name, ...(name === "mouse" ? { mouseSteering: true } : {}) }));
         engine.current?.renderer.domElement.focus();
         notify(
           name === "mouse"
-            ? "Mouse movement · click the ground to walk. Right drag looks around."
+            ? "Mouse movement · click to walk, move the pointer to steer, and use the vehicle buttons for forward and reverse."
             : "Arrow key movement · arrows or WASD to walk, Shift to run.",
         );
         return;
@@ -345,110 +577,23 @@ export default function App() {
         </header>
       ) : null}
       {screen === "home" ? (
-        <>
-          <ScenePreview backdrop />
-          <div className="home-vignette" />
-          <main className="home-content">
-            <div className="home-eyebrow">
-              <span className="status-dot" /> AN OPEN-WORLD JOURNEY THROUGH
-              KERALA
-            </div>
-            <h1>
-              Some places
-              <br />
-              feel like <em>home.</em>
-            </h1>
-            <p className="home-subtitle">Explore God’s Own Country.</p>
-            <p className="home-description">
-              From the quiet backwaters to the misty Ghats.
-              <br />
-              Fourteen districts. Countless little discoveries.
-              <br />A whole world, waiting at your own pace.
-            </p>
-            <div className="home-actions">
-              <button
-                className="primary light-primary"
-                disabled={!geography}
-                onClick={() => {
-                  setNotice("");
-                  setGender(null);
-                  setScreen("character");
-                }}
-              >
-                {ml ? "യാത്ര തുടങ്ങാം" : "Begin your journey"}
-                <ArrowRight size={19} />
-              </button>
-              {saved && geography ? (
-                <button
-                  className="continue-button"
-                  onClick={() => {
-                    const r = geography.regions.find(
-                      (r) => r.id === saved.region,
-                    );
-                    if (r)
-                      void start(
-                        r,
-                        geography.places.find((p) => p.tile === saved.area),
-                        true,
-                      );
-                  }}
-                >
-                  <Play size={15} /> Continue exploring
-                </button>
-              ) : null}
-            </div>
-            <div className="home-facts">
-              <span>
-                <Compass size={17} />
-                <strong>14</strong> districts
-              </span>
-              <i />
-              <span>
-                <Waves size={17} /> One beautiful state
-              </span>
-              <i />
-              <span>Your own pace</span>
-            </div>
-          </main>
-          <aside className="home-location">
-            <div className="location-heading">
-              <span className="tiny-line" /> A GOOD PLACE TO BEGIN{" "}
-              <span>01 / 14</span>
-            </div>
-            <div className="home-location-info">
-              <span className="location-outline">
-                <MapPin size={26} strokeWidth={1.2} />
-              </span>
-              <div>
-                <h3>Thrissur</h3>
-                <p>The cultural heart of Kerala.</p>
-              </div>
-              <button
-                className="round-button"
-                aria-label="Choose Thrissur starting location"
-                onClick={() => {
-                  setDistrict("thrissur");
-                  setNotice("");
-                  setGender(null);
-                  setScreen("character");
-                }}
-              >
-                <ArrowRight size={19} />
-              </button>
-            </div>
-            <div className="location-coordinates">
-              10.5244° N &nbsp; 76.2145° E <span>SWARAJ ROUND</span>
-            </div>
-          </aside>
-          <footer className="home-footer">
-            <span>
-              KERALA OPEN WORLD <i /> EXPLORATION BUILD 0.1
-            </span>
-            <span>
-              <span className="status-dot" /> BUILT FOR THE WANDERER IN YOU
-            </span>
-          </footer>
-        </>
+        <HomeScreen
+          geography={geography}
+          saved={saved}
+          ml={ml}
+          onBegin={() => { setNotice(""); setGender(null); setScreen("character"); }}
+          onContinue={() => {
+            if (!geography || !saved) return;
+            const r = geography.regions.find((r) => r.id === saved.region);
+            if (r) void start(r, geography.places.find((p) => p.tile === saved.area), true);
+          }}
+          onSelectDistrict={(id) => {
+            setDistrict(id);
+            setNotice("");
+            setGender(null);
+            setScreen("character");
+          }}
+        />
       ) : screen === "character" ? (
         <CharacterSetup
           avatar={avatar}
@@ -614,7 +759,7 @@ export default function App() {
         <GameView
           payload={payload}
           settings={settings}
-          paused={Boolean(overlay) || Boolean(loading)}
+          paused={Boolean(overlay) || Boolean(loading) || Boolean(airTrip)}
           onReady={(e) => {
             engine.current = e;
           }}
@@ -631,7 +776,22 @@ export default function App() {
         <TransportPanel
           geography={geography}
           region={payload.region}
-          onTravel={(r, p) => void start(r, p)}
+          snapshot={snapshot ?? undefined}
+          onBook={bookBus}
+          onWalkToStation={(id) => {
+            const station = engine.current?.terminals.stations.find(s => s.data.id === id);
+            setOverlay(null); engine.current?.setPaused(false);
+            if (station) engine.current?.walkToDestination(station.waiting);
+            else notify("Open the map and explore this terminal’s area first.");
+          }}
+          onTravel={async(r,p,mode)=>{
+            if(mode==="air" && !engine.current?.bus?.attached && !engine.current?.trainPassenger){
+              setOverlay(null);setAirTrip({from:payload.region.town,to:p?.name??r.town});
+              await new Promise(resolve=>setTimeout(resolve,4200));
+              setAirTrip(null);
+            }
+            void start(r,p);
+          }}
           onClose={() => setOverlay(null)}
         />
       ) : null}
@@ -804,8 +964,9 @@ export default function App() {
                   District boundaries are from the 2021 geoBoundaries / Pathways
                   Data dataset. Roads, building footprints, towns, stations and
                   airports come from OpenStreetMap. All scene models are
-                  original procedural interpretations; terrain height and facade
-                  details are approximate.
+                  original procedural interpretations (fidelity C). Roads and footprints
+                  retain sourced coordinates. Terrain uses coarse, attributed elevation
+                  grids; road decks, bridges and facades are approximate.
                 </p>
                 <p>
                   Fourteen district landmark areas and thirteen additional
@@ -876,6 +1037,13 @@ export default function App() {
           </button>
         </div>
       ) : null}
+      {airTrip ? <div className="air-transfer" role="status" aria-live="polite">
+        <span className="eyebrow">SIMULATED AIRPORT TRANSFER</span>
+        <h2>{airTrip.from} → {airTrip.to}</h2>
+        <div className="flight-path"><span/><Plane size={40}/><span/></div>
+        <p>Departure · en route · arrival</p>
+        <small>This cinematic skips the flight between imported airport scenes.</small>
+      </div> : null}
       {loading ? (
         <div className="travel-loading" role="status">
           <TreePalm size={44} strokeWidth={1} />

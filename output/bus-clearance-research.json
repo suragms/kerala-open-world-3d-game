@@ -1,0 +1,37 @@
+[
+  {
+    "id": "thrissur-guruvayur",
+    "defaultBlockedSamples": 60,
+    "connected": true,
+    "finalFootprintCollisions": 0,
+    "unresolved": []
+  },
+  {
+    "id": "ernakulam-aluva",
+    "defaultBlockedSamples": 0,
+    "connected": true,
+    "finalFootprintCollisions": 0,
+    "unresolved": []
+  },
+  {
+    "id": "thrissur-ernakulam",
+    "defaultBlockedSamples": 63,
+    "connected": true,
+    "finalFootprintCollisions": 0,
+    "unresolved": []
+  },
+  {
+    "id": "kozhikode-kannur",
+    "defaultBlockedSamples": 62,
+    "connected": true,
+    "finalFootprintCollisions": 0,
+    "unresolved": []
+  },
+  {
+    "id": "kottayam-ernakulam",
+    "defaultBlockedSamples": 110,
+    "connected": true,
+    "finalFootprintCollisions": 0,
+    "unresolved": []
+  }
+]

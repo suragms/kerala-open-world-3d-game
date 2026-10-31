@@ -15,7 +15,8 @@
     "terminalSource": "https://www.openstreetmap.org/way/1303676221",
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-85000933",
@@ -33,7 +34,8 @@
     "terminalSource": "https://www.openstreetmap.org/way/254158852",
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-254099650",
@@ -51,7 +53,8 @@
     "terminalSource": "https://www.openstreetmap.org/way/452201953",
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-805245624",
@@ -69,7 +72,8 @@
     "terminalSource": "https://www.openstreetmap.org/way/392012106",
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-14120155023",
@@ -86,7 +90,8 @@
     "theme": "station",
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-4760378949",
@@ -103,7 +108,8 @@
     "theme": "station",
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-4760378950",
@@ -120,7 +126,8 @@
     "theme": "station",
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-10255800219",
@@ -137,7 +144,8 @@
     "theme": "station",
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-17712257",
@@ -152,7 +160,8 @@
     "playable": true,
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-37768684",
@@ -167,7 +176,8 @@
     "playable": true,
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-255038897",
@@ -182,7 +192,8 @@
     "playable": true,
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-31518637",
@@ -197,7 +208,8 @@
     "playable": true,
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   },
   {
     "id": "osm-1206084829",
@@ -212,6 +224,7 @@
     "playable": true,
     "verification": "source-and-district-checked",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction."
+    "approximation": "Artist interpretation; source roads and footprints retain horizontal coordinates. Not a surveyed or photogrammetric reconstruction.",
+    "fidelity": "C"
   }
 ]

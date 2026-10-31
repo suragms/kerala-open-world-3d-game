@@ -16,7 +16,8 @@
     "source": "https://www.openstreetmap.org/relation/1650471",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "kollam",
@@ -35,7 +36,8 @@
     "source": "https://www.openstreetmap.org/way/101010838",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "pathanamthitta",
@@ -54,7 +56,8 @@
     "source": "https://www.keralatourism.org/temples/pathanamthitta/aranmula-parthasarathy",
     "verification": "official-tourism-coordinate-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "alappuzha",
@@ -73,7 +76,8 @@
     "source": "https://www.openstreetmap.org/node/13621219401",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "kottayam",
@@ -92,7 +96,8 @@
     "source": "https://www.openstreetmap.org/node/10718965941",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "idukki",
@@ -111,7 +116,8 @@
     "source": "https://www.openstreetmap.org/relation/15401924",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "ernakulam",
@@ -130,7 +136,8 @@
     "source": "https://www.openstreetmap.org/node/600348761",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "thrissur",
@@ -149,7 +156,8 @@
     "source": "https://www.openstreetmap.org/node/9841160136",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "palakkad",
@@ -168,7 +176,8 @@
     "source": "https://www.openstreetmap.org/way/194737252",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "malappuram",
@@ -187,7 +196,8 @@
     "source": "https://www.openstreetmap.org/way/319063007",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "kozhikode",
@@ -206,7 +216,8 @@
     "source": "https://www.openstreetmap.org/node/10240443491",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "wayanad",
@@ -225,7 +236,8 @@
     "source": "https://www.openstreetmap.org/node/9815272512",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "kannur",
@@ -244,7 +256,8 @@
     "source": "https://www.openstreetmap.org/way/542192379",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   },
   {
     "id": "kasaragod",
@@ -263,6 +276,7 @@
     "source": "https://www.openstreetmap.org/way/670422415",
     "verification": "osm-source-and-district-check",
     "asset": "original-procedural-exterior",
-    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates."
+    "approximation": "Artist interpretation; OSM roads and building footprints retain local coordinates.",
+    "fidelity": "C"
   }
 ]

@@ -346,7 +346,8 @@ export function findPath(
   world: CollisionWorld,
   radius = 0.45,
 ): Vec2[] {
-  const clearance = radius + 0.08;
+  // Planning margin must not trap a body that already fits beside a wall or a stopped bus.
+  const clearance = world.blocked(from,radius + 0.08) ? radius : radius + 0.08;
   const destination = world.closestValid(target, clearance);
   if (!destination || world.blocked(from, radius)) return [];
   if (world.segmentClear(from, destination, clearance)) return [destination];
@@ -442,6 +443,7 @@ export interface Road {
 }
 export class RoadNetwork {
   roads: Road[];
+  private segmentCells = new Map<string, { road: Road; index: number }[]>();
   private graph = new Map<
     string,
     { point: Vec2; edges: { to: string; weight: number }[] }
@@ -454,6 +456,12 @@ export class RoadNetwork {
           key = this.key(p);
         if (!this.graph.has(key)) this.graph.set(key, { point: p, edges: [] });
         if (i) {
+          const segmentStart = road.points[i - 1], segmentEnd = p;
+          for (let x = Math.floor(Math.min(segmentStart.x,segmentEnd.x) / 128); x <= Math.floor(Math.max(segmentStart.x,segmentEnd.x) / 128); x++)
+            for (let z = Math.floor(Math.min(segmentStart.z,segmentEnd.z) / 128); z <= Math.floor(Math.max(segmentStart.z,segmentEnd.z) / 128); z++) {
+              const cell = `${x},${z}`, segments = this.segmentCells.get(cell) ?? [];
+              segments.push({ road, index: i }); this.segmentCells.set(cell, segments);
+            }
           const previous = road.points[i - 1],
             a = this.key(previous),
             weight = distance(p, previous);
@@ -469,75 +477,67 @@ export class RoadNetwork {
   nearest(p: Vec2): { point: Vec2; road: Road; index: number } | undefined {
     let best = Infinity,
       result;
-    for (const road of this.roads)
-      for (let i = 1; i < road.points.length; i++) {
+    const cx = Math.floor(p.x / 128), cz = Math.floor(p.z / 128);
+    const candidates = [];
+    for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) candidates.push(...this.segmentCells.get(`${cx+x},${cz+z}`) ?? []);
+    const inspect = (road: Road, i: number) => {
         const q = nearestOnSegment(p, road.points[i - 1], road.points[i]),
           d = distance(p, q);
         if (d < best) {
           best = d;
           result = { point: q, road, index: i };
         }
-      }
+    };
+    for (const { road, index } of candidates) inspect(road, index);
+    if (best < 128) return result;
+    for (const road of this.roads) for (let i = 1; i < road.points.length; i++) inspect(road, i);
     return result;
   }
   route(from: Vec2, to: Vec2): Vec2[] {
-    const a = this.nearest(from),
-      b = this.nearest(to);
+    const a = this.nearest(from), b = this.nearest(to);
     if (!a || !b) return [];
     if (a.road === b.road) {
-      if (a.road.oneway) {
-        const point = a.road.points[a.index - 1],
-          next = a.road.points[a.index];
-        if (
-          b.index < a.index ||
-          (b.index === a.index &&
-            (b.point.x - a.point.x) * (next.x - point.x) +
-              (b.point.z - a.point.z) * (next.z - point.z) <
-              0)
-        )
-          return [];
+      const start = a.road.points[a.index-1], end = a.road.points[a.index];
+      const forward = b.index > a.index || b.index === a.index &&
+        (b.point.x-a.point.x)*(end.x-start.x)+(b.point.z-a.point.z)*(end.z-start.z) >= -0.00001;
+      if (!a.road.oneway || forward) {
+        const pts = a.road.points.slice(Math.min(a.index,b.index),Math.max(a.index,b.index));
+        return [from,a.point,...(a.index <= b.index ? pts : pts.reverse()),b.point,to];
       }
-      const lo = Math.min(a.index, b.index),
-        hi = Math.max(a.index, b.index);
-      const pts = a.road.points.slice(lo, hi);
-      return [
-        from,
-        a.point,
-        ...(a.index <= b.index ? pts : pts.reverse()),
-        b.point,
-        to,
-      ];
     }
-    const start = this.key(a.road.points[a.index]),
-      end = this.key(b.road.points[b.index]);
-    const costs = new Map([[start, 0]]),
-      previous = new Map<string, string>(),
-      queue = [start],
-      visited = new Set<string>();
+    // Virtual endpoint connectors respect the direction of BOTH snapped road edges.
+    const starts = [a.road.points[a.index]];
+    if (!a.road.oneway || distance(a.point,a.road.points[a.index-1]) < 0.01) starts.push(a.road.points[a.index-1]);
+    const ends = [b.road.points[b.index-1]];
+    if (!b.road.oneway || distance(b.point,b.road.points[b.index]) < 0.01) ends.push(b.road.points[b.index]);
+    const endCosts = new Map(ends.map(p => [this.key(p),distance(p,b.point)]));
+    const costs = new Map<string,number>(), previous = new Map<string,string>();
+    const queue: string[] = [], visited = new Set<string>();
+    for (const p of starts) {
+      const key = this.key(p), cost = distance(a.point,p);
+      if (cost < (costs.get(key) ?? Infinity)) { costs.set(key,cost); queue.push(key); }
+    }
+    let bestEnd: string | undefined, bestCost = Infinity;
     while (queue.length) {
-      queue.sort((a, b) => costs.get(a)! - costs.get(b)!);
-      const k = queue.shift()!;
-      if (k === end) break;
-      if (visited.has(k)) continue;
-      visited.add(k);
-      for (const edge of this.graph.get(k)?.edges ?? []) {
-        const cost = costs.get(k)! + edge.weight;
-        if (cost < (costs.get(edge.to) ?? Infinity)) {
-          costs.set(edge.to, cost);
-          previous.set(edge.to, k);
-          queue.push(edge.to);
-        }
+      queue.sort((x,y) => costs.get(x)!-costs.get(y)!);
+      const key = queue.shift()!, cost = costs.get(key)!;
+      if (cost > bestCost) break;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      const connector = endCosts.get(key);
+      if (connector !== undefined && cost+connector < bestCost) { bestEnd=key; bestCost=cost+connector; }
+      for (const edge of this.graph.get(key)?.edges ?? []) {
+        const next = cost+edge.weight;
+        if (next < (costs.get(edge.to) ?? Infinity)) { costs.set(edge.to,next); previous.set(edge.to,key); queue.push(edge.to); }
       }
     }
-    if (!costs.has(end)) return [];
-    const path = [to, b.point];
-    let k: string | undefined = end;
-    while (k) {
-      path.unshift(this.graph.get(k)!.point);
-      k = previous.get(k);
-    }
-    return [from, a.point, ...path];
+    if (!bestEnd) return [];
+    const path: Vec2[] = [];
+    let key: string | undefined = bestEnd;
+    while (key) { path.unshift(this.graph.get(key)!.point); key = previous.get(key); }
+    return [from,a.point,...path,b.point,to];
   }
+
 }
 
 export class StateRouter {
@@ -578,11 +578,11 @@ export class StateRouter {
     const endKey = this.nearestKey(to);
     if (!startKey || !endKey) {
       const d = haversine(from, to);
-      return { distanceKm: Math.round(d), minutes: Math.round(d * 1.5) };
+      return { distanceKm: Math.round(d / 1000), minutes: Math.round(d / 1000 * 1.5) };
     }
     if (startKey === endKey) {
       const d = haversine(from, to);
-      return { distanceKm: Math.round(d), minutes: Math.round(d * 1.5) };
+      return { distanceKm: Math.round(d / 1000), minutes: Math.round(d / 1000 * 1.5) };
     }
     const costs = new Map([[startKey, 0]]);
     const previous = new Map<string, string>();
@@ -604,7 +604,7 @@ export class StateRouter {
       }
     }
     const dist = costs.get(endKey) ?? haversine(from, to);
-    return { distanceKm: Math.round(dist), minutes: Math.round(dist * 1.4) };
+    return { distanceKm: Math.round(dist / 1000), minutes: Math.round(dist / 1000 * 1.4) };
   }
 }
 
@@ -617,7 +617,7 @@ export function estimateJourney(
 ): { distanceKm: number; minutes: number; label: string } {
   const straight = haversine(from, to);
   if (mode === "air") {
-    const km = Math.max(25, Math.round(straight * 1.15));
+    const km = Math.max(25, Math.round(straight / 1000 * 1.15));
     const mins = Math.max(35, Math.round(km * 0.85 + 45));
     const hrs = Math.floor(mins / 60);
     const m = mins % 60;
@@ -634,7 +634,7 @@ export function estimateJourney(
     const timeLabel = hrs ? `${hrs}h ${m}m` : `${m}m`;
     return { distanceKm: est.distanceKm, minutes: mins, label: `~${est.distanceKm} km · ~${timeLabel}` };
   }
-  const km = Math.round(straight * 1.25);
+  const km = Math.round(straight / 1000 * 1.25);
   const mins = Math.round(km * 1.3);
   const hrs = Math.floor(mins / 60);
   const m = mins % 60;

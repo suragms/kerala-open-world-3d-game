@@ -1,0 +1,377 @@
+{
+  "levels": {
+    "A": "Verified recognizable exterior supported by geographic and visual references",
+    "B": "Sourced geographic location or approximate footprint; exterior not verified",
+    "C": "Original procedural architectural approximation at a sourced location"
+  },
+  "policy": "No Level A models are claimed. Geographic positions are distinct from architectural fidelity.",
+  "regions": [
+    {
+      "id": "thiruvananthapuram",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/relation/1650471"
+    },
+    {
+      "id": "kollam",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/101010838"
+    },
+    {
+      "id": "pathanamthitta",
+      "fidelity": "C",
+      "source": "https://www.keralatourism.org/temples/pathanamthitta/aranmula-parthasarathy"
+    },
+    {
+      "id": "alappuzha",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/13621219401"
+    },
+    {
+      "id": "kottayam",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/10718965941"
+    },
+    {
+      "id": "idukki",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/relation/15401924"
+    },
+    {
+      "id": "ernakulam",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/600348761"
+    },
+    {
+      "id": "thrissur",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/9841160136"
+    },
+    {
+      "id": "palakkad",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/194737252"
+    },
+    {
+      "id": "malappuram",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/319063007"
+    },
+    {
+      "id": "kozhikode",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/10240443491"
+    },
+    {
+      "id": "wayanad",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/9815272512"
+    },
+    {
+      "id": "kannur",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/542192379"
+    },
+    {
+      "id": "kasaragod",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/670422415"
+    }
+  ],
+  "busStations": [
+    {
+      "id": "way-467555277",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/467555277"
+    },
+    {
+      "id": "way-45766128",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/45766128"
+    },
+    {
+      "id": "way-254554197",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/254554197"
+    },
+    {
+      "id": "way-203321867",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/203321867"
+    },
+    {
+      "id": "way-241740100",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/241740100"
+    },
+    {
+      "id": "way-515186050",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/515186050"
+    },
+    {
+      "id": "node-1166965746",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/1166965746"
+    },
+    {
+      "id": "way-931648255",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/931648255"
+    },
+    {
+      "id": "node-11273823811",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/11273823811"
+    },
+    {
+      "id": "way-641817282",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/641817282"
+    },
+    {
+      "id": "node-289607455",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/289607455"
+    },
+    {
+      "id": "way-206995109",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/206995109"
+    },
+    {
+      "id": "way-362568122",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/362568122"
+    },
+    {
+      "id": "way-836324193",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/836324193"
+    },
+    {
+      "id": "node-2592394225",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/2592394225"
+    },
+    {
+      "id": "way-45765966",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/45765966"
+    },
+    {
+      "id": "way-45766211",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/45766211"
+    },
+    {
+      "id": "way-801891931",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/801891931"
+    },
+    {
+      "id": "way-924858639",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/924858639"
+    },
+    {
+      "id": "way-1130704371",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/1130704371"
+    },
+    {
+      "id": "way-757514180",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/757514180"
+    },
+    {
+      "id": "way-804822738",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/804822738"
+    },
+    {
+      "id": "node-8788724490",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/8788724490"
+    },
+    {
+      "id": "node-9365045366",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/9365045366"
+    },
+    {
+      "id": "way-402091474",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/402091474"
+    },
+    {
+      "id": "way-1238325724",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/1238325724"
+    },
+    {
+      "id": "node-11064301105",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/11064301105"
+    },
+    {
+      "id": "node-13583998401",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/13583998401"
+    },
+    {
+      "id": "way-649459143",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/649459143"
+    },
+    {
+      "id": "node-354065017",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/354065017"
+    },
+    {
+      "id": "way-256426212",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/256426212"
+    },
+    {
+      "id": "way-922190214",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/922190214"
+    },
+    {
+      "id": "node-2897254089",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/2897254089"
+    },
+    {
+      "id": "way-337923539",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/337923539"
+    },
+    {
+      "id": "way-799123939",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/799123939"
+    },
+    {
+      "id": "way-799123942",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/799123942"
+    },
+    {
+      "id": "node-3951434588",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/3951434588"
+    },
+    {
+      "id": "way-649481258",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/649481258"
+    },
+    {
+      "id": "way-1240004287",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/1240004287"
+    },
+    {
+      "id": "node-2916974293",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/2916974293"
+    },
+    {
+      "id": "node-6897397549",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/6897397549"
+    },
+    {
+      "id": "node-8396443668",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/8396443668"
+    },
+    {
+      "id": "node-8411932471",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/8411932471"
+    },
+    {
+      "id": "way-835773583",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/835773583"
+    },
+    {
+      "id": "way-836159837",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/836159837"
+    },
+    {
+      "id": "way-1026012346",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/1026012346"
+    },
+    {
+      "id": "way-181286348",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/181286348"
+    },
+    {
+      "id": "way-192484155",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/192484155"
+    },
+    {
+      "id": "way-192490628",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/192490628"
+    },
+    {
+      "id": "node-3883265125",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/3883265125"
+    },
+    {
+      "id": "way-801583551",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/801583551"
+    },
+    {
+      "id": "way-34416321",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/34416321"
+    },
+    {
+      "id": "way-386991360",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/386991360"
+    },
+    {
+      "id": "node-1080684023",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/1080684023"
+    },
+    {
+      "id": "node-8334434124",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/node/8334434124"
+    },
+    {
+      "id": "way-377134839",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/377134839"
+    },
+    {
+      "id": "way-972180156",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/972180156"
+    },
+    {
+      "id": "way-1255176867",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/way/1255176867"
+    },
+    {
+      "id": "relation-17712257",
+      "fidelity": "C",
+      "source": "https://www.openstreetmap.org/relation/17712257"
+    }
+  ]
+}

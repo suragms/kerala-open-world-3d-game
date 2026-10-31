@@ -28,6 +28,7 @@ import {
   nearestOnSegment,
 } from "./navigation";
 import type { Road } from "./navigation";
+import { sampleTerrain } from "./terrain";
 
 export interface LocalFeature {
   source: GeoFeature;
@@ -73,18 +74,23 @@ export class World {
   runways: Vec2[][] = [];
   streetlights = new Map<string, Vec2[]>();
   network: RoadNetwork;
+  walkingNetwork: RoadNetwork;
   landmark: THREE.Group;
   landmarkPosition: Vec2;
   spawn: Vec2;
   localFeatures: LocalFeature[] = [];
   busStopPositions: Vec2[] = [];
+  private chunkBusStops = new Map<string,Vec2[]>();
   chunks = new Map<string, THREE.Group>();
   private featureChunks = new Map<string, LocalFeature[]>();
-  private vegetationChunks = new Set<string>();
+  private createdChunks = 0;
+  private disposedChunks = 0;
+  private maxChunkMilliseconds = 0;
   private lastChunk = "";
   private queue: string[] = [];
   private wanted = new Set<string>();
   private ground: THREE.Mesh;
+  private groundBase={x:0,z:0};
   private waterMaterial: THREE.MeshPhysicalMaterial;
   constructor(
     public scene: THREE.Scene,
@@ -93,6 +99,7 @@ export class World {
     public settings: Settings,
   ) {
     initTextures();
+    const walkRoads: Road[] = [];
     scene.add(this.root);
     this.landmarkPosition = toLocal([region.lon, region.lat], tile.origin);
     this.waterMaterial = new THREE.MeshPhysicalMaterial({
@@ -103,10 +110,11 @@ export class World {
       transparent: true,
       opacity: 0.92,
     });
-    this.waterMaterial.userData.transient = true;
+    // Shared by independently unloaded water chunks; the World owns its disposal.
+    this.waterMaterial.userData.transient = false;
     for (const source of tile.features) {
       const points = source.points.map((p) => toLocal(p, tile.origin));
-      if (points.length < 2) continue;
+      if (!points.length) continue;
       const center = {
         x: points.reduce((s, p) => s + p.x, 0) / points.length,
         z: points.reduce((s, p) => s + p.z, 0) / points.length,
@@ -114,7 +122,7 @@ export class World {
       const f = { source, points, center };
       this.localFeatures.push(f);
       const tags = source.tags;
-      if (tags.highway) {
+      if (tags.highway && source.type !== "node") {
         const kind = tags.highway,
           width = roadWidths[kind] ?? 5;
         const road = {
@@ -126,11 +134,17 @@ export class World {
           oneway: ["yes", "-1"].includes(tags.oneway),
         };
         if (isDriveable(kind)) this.roads.push(road);
+        walkRoads.push({ ...road, oneway: false });
         for (let i = 1; i < points.length; i++) {
           const a = points[i - 1],
             b = points[i],
             mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
-          this.assign({ source, points: [a, b], center: mid });
+          const steps = Math.max(1, Math.ceil(distance(a, b) / 70));
+          for (let j = 0; j < steps; j++) {
+            const start = { x: a.x + (b.x-a.x)*j/steps, z: a.z + (b.z-a.z)*j/steps };
+            const end = { x: a.x + (b.x-a.x)*(j+1)/steps, z: a.z + (b.z-a.z)*(j+1)/steps };
+            this.assign({ source, points: [start, end], center: { x: (start.x+end.x)/2, z: (start.z+end.z)/2 } });
+          }
         }
       } else if (tags.railway) {
         if (!tags.service && tags.railway === "rail")
@@ -144,13 +158,14 @@ export class World {
         this.assign(f);
       } else {
         this.assign(f);
-        if (tags.building && distance(center, this.landmarkPosition) > 28) {
-          const base = this.height(center.x, center.z);
+        if (tags.building && !(tags.amenity === "bus_station" && tags.building === "construction") && distance(center, this.landmarkPosition) > 28) {
+          const elevations=points.map(p=>this.height(p.x,p.z));
+          const base = Math.min(...elevations), top=Math.max(...elevations);
           this.collisions.add(
             points,
             false,
             base,
-            base +
+            top +
               (Number(tags.height) ||
                 Math.max(1, Math.min(7, Number(tags["building:levels"]) || 2)) *
                   3.2) +
@@ -198,6 +213,7 @@ export class World {
           ),
       );
     this.network = new RoadNetwork(this.roads);
+    this.walkingNetwork = new RoadNetwork(walkRoads);
     const nearRoad = this.network.nearest({
       x: this.landmarkPosition.x,
       z: this.landmarkPosition.z + 35,
@@ -215,7 +231,7 @@ export class World {
       initial;
     this.collisions.walkableAt = (p) =>
       Math.abs(p.x) < tile.radius - 75 && Math.abs(p.z) < tile.radius - 75;
-    this.collisions.add(
+    if (region.asset !== "bus-terminal") this.collisions.add(
       [
         { x: this.landmarkPosition.x - 15, z: this.landmarkPosition.z - 14 },
         { x: this.landmarkPosition.x + 15, z: this.landmarkPosition.z - 14 },
@@ -227,7 +243,9 @@ export class World {
       this.height(this.landmarkPosition.x, this.landmarkPosition.z),
       this.height(this.landmarkPosition.x, this.landmarkPosition.z) + 24,
     );
-    const geometry = new THREE.PlaneGeometry(5200, 5200, 256, 256);
+    const gridStep=tile.terrain ? tile.terrain.step/(settings.quality === "low" ? 1 : settings.quality === "medium" ? 2 : 4) : 5200/256;
+    const halfExtent=Math.ceil(2600/gridStep)*gridStep, divisions=Math.round(halfExtent*2/gridStep);
+    const geometry = new THREE.PlaneGeometry(halfExtent*2, halfExtent*2, divisions, divisions);
     geometry.rotateX(-Math.PI / 2);
     const pos = geometry.getAttribute("position");
     const colors: number[] = [];
@@ -257,7 +275,7 @@ export class World {
     this.ground = new THREE.Mesh(geometry, groundMat);
     this.ground.receiveShadow = true;
     this.root.add(this.ground);
-    this.landmark = landmarkModel(region.theme, region.landmark);
+    this.landmark = region.asset === "bus-terminal" ? new THREE.Group() : landmarkModel(region.theme, region.landmark);
     this.landmark.position.set(
       this.landmarkPosition.x,
       this.height(this.landmarkPosition.x, this.landmarkPosition.z),
@@ -284,6 +302,7 @@ export class World {
     this.updateStreaming(this.spawn, true);
   }
   height(x: number, z: number) {
+    if (this.tile.terrain) { const sourced=sampleTerrain(this.tile.terrain,x,z); if (sourced !== undefined) return sourced; }
     if (this.region.theme === "tea" || this.region.id === "wayanad")
       return (
         Math.sin(x * 0.003) * 8 +
@@ -322,18 +341,20 @@ export class World {
     for (let i = 0; i < 14; i++) {
       const angle = (i / 14) * Math.PI * 2,
         range = 42 + (i % 3) * 8;
+      const point={x:p.x+Math.cos(angle)*range,z:p.z+Math.sin(angle)*range}, road=this.network.nearest(point);
+      if (this.collisions.blocked(point,2) || road && distance(point,road.point)<road.road.width/2+3) continue;
       palm(
         g,
-        p.x + Math.cos(angle) * range,
-        y,
-        p.z + Math.sin(angle) * range,
+        point.x,
+        this.height(point.x,point.z),
+        point.z,
         0.95 + (i % 4) * 0.12,
         i + 12,
       );
     }
     for (const side of [-1, 1]) {
       const bench = new THREE.Group();
-      bench.position.set(p.x + side * 24, y, p.z + 25);
+      bench.position.set(p.x + side * 24, this.height(p.x+side*24,p.z+25), p.z + 25);
       box(bench, palette.wood, 0, 0.6, 0, 2.3, 0.15, 0.6);
       box(bench, palette.wood, 0, 1, 0.28, 2.3, 0.7, 0.13);
       for (const x of [-0.9, 0.9])
@@ -342,7 +363,7 @@ export class World {
     }
     bake(g);
     this.root.add(g);
-    if (this.region.theme === "tea" || this.region.id === "wayanad") {
+    if (!this.tile.terrain && (this.region.theme === "tea" || this.region.id === "wayanad")) {
       const hills = new THREE.Group();
       const rng = seeded(873);
       for (let i = 0; i < 22; i++) {
@@ -385,39 +406,8 @@ export class World {
         return water;
       };
       this.collisions.waterAt = waterAt;
-      const vertices: number[] = [],
-        step = 32,
-        extent = this.tile.radius + 700;
-      for (let x = -extent; x < extent; x += step)
-        for (let z = -extent; z < extent; z += step)
-          if (waterAt({ x: x + step / 2, z: z + step / 2 }))
-            vertices.push(
-              x,
-              0.1,
-              z,
-              x,
-              0.1,
-              z + step,
-              x + step,
-              0.1,
-              z,
-              x + step,
-              0.1,
-              z,
-              x,
-              0.1,
-              z + step,
-              x + step,
-              0.1,
-              z + step,
-            );
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(vertices, 3),
-      );
-      geo.computeVertexNormals();
-      g.add(new THREE.Mesh(geo, this.waterMaterial));
+      // Sea geometry is generated with nearby chunks. A district-length corridor must
+      // never allocate an ocean mesh across its entire rectangular bounding box.
       for (const f of coast)
         this.ribbon(f.points, 8, material("#c7b693"), g, 0.025);
     }
@@ -532,14 +522,14 @@ export class World {
             for (let d = 0; d < length; d += 40) {
               const x = a.x + dx * d,
                 z = a.z + dz * d,
-                m = box(g, palette.white, x, 0.12, z, 0.6, 0.02, 15);
+              m = box(g, palette.white, x, this.height(x,z)+0.12, z, 0.6, 0.02, 15);
               m.rotation.y = Math.atan2(dx, dz);
               for (const side of [-1, 1])
                 cylinder(
                   g,
                   material("#f4dc9a"),
                   x + dz * 24 * side,
-                  0.2,
+                  this.height(x+dz*24*side,z-dx*24*side)+0.2,
                   z - dx * 24 * side,
                   0.15,
                   0.35,
@@ -555,15 +545,17 @@ export class World {
     this.root.add(g);
   }
   private createChunk(key: string) {
+    const began = performance.now();
     const [cx, cz] = key.split(",").map(Number),
       group = new THREE.Group();
     group.name = `Geographic chunk ${key}`;
     const lights: Vec2[] = [];
+    const stops: Vec2[] = [];
     const rng = seeded(cx * 72847 + cz * 3143 + 9191);
     const features = this.featureChunks.get(key) ?? [];
     for (const f of features) {
       const t = f.source.tags;
-      if (t.highway) {
+      if (t.highway && f.source.type !== "node") {
         const width = roadWidths[t.highway] ?? 5;
         if (width >= 6)
           this.ribbon(
@@ -629,7 +621,7 @@ export class World {
           box(group, palette.dark, x + 0.7, y + 7.5, z, 1.5, 0.09, 0.12);
           box(group, material("#f4dc9a"), x + 1.2, y + 7.4, z, 0.5, 0.05, 0.22);
         }
-      } else if (t.building && distance(f.center, this.landmarkPosition) > 32) {
+      } else if (t.building && !(t.amenity === "bus_station" && t.building === "construction") && distance(f.center, this.landmarkPosition) > 32) {
         const minX = Math.min(...f.points.map((p) => p.x)),
           maxX = Math.max(...f.points.map((p) => p.x)),
           minZ = Math.min(...f.points.map((p) => p.z)),
@@ -644,8 +636,11 @@ export class World {
               Number(t["building:levels"]) || 1 + Math.floor(rng() * 2),
             ),
           ),
-          h = Number(t.height) || levels * 3.2,
-          base = this.height(f.center.x, f.center.z);
+          floorHeight = Number(t.height) || levels * 3.2,
+          elevations=f.points.map(p=>this.height(p.x,p.z)),
+          base = Math.min(...elevations),
+          foundationTop = Math.max(...elevations),
+          h = floorHeight+foundationTop-base;
         const shape = new THREE.Shape(
           f.points.map(
             (p) => new THREE.Vector2(p.x - f.center.x, -p.z + f.center.z),
@@ -692,7 +687,7 @@ export class World {
               group,
               palette.wood,
               x,
-              base + floor * 3.2 + 1.9,
+              foundationTop + floor * 3.2 + 1.9,
               maxZ + 0.04,
               1.05,
               1.35,
@@ -702,7 +697,7 @@ export class World {
               group,
               material("#53665c", 0.35),
               x,
-              base + floor * 3.2 + 1.9,
+              foundationTop + floor * 3.2 + 1.9,
               maxZ + 0.08,
               0.88,
               1.15,
@@ -751,13 +746,13 @@ export class World {
             }
           }
       } else if (t.railway === "platform") {
-        platformCanopy(group, f.points);
+        platformCanopy(group, f.points, (x,z)=>this.height(x,z));
       } else if (t.highway === "bus_stop" && f.source.type === "node") {
         const p = f.points[0];
         if (p) {
           const y = this.height(p.x, p.z);
           busStop(group, p.x, y, p.z);
-          this.busStopPositions.push({ x: p.x, z: p.z });
+          stops.push({ x: p.x, z: p.z });
         }
       } else if (t.landuse || t.leisure) {
         const poly = this.polygon(
@@ -824,13 +819,36 @@ export class World {
         );
         m.rotation.z = (rng() - 0.5) * 0.4;
       }
+    if (this.collisions.waterAt) {
+      const [cx,cz]=key.split(",").map(Number), vertices:number[]=[];
+      const step=16;
+      for(let x=cx*SIZE;x<(cx+1)*SIZE;x+=step) for(let z=cz*SIZE;z<(cz+1)*SIZE;z+=step) {
+        if (this.collisions.waterAt({x:x+step/2,z:z+step/2})) vertices.push(x,.1,z,x,.1,z+step,x+step,.1,z,x+step,.1,z,x,.1,z+step,x+step,.1,z+step);
+      }
+      if(vertices.length){const geometry=new THREE.BufferGeometry();geometry.setAttribute("position",new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();group.add(new THREE.Mesh(geometry,this.waterMaterial));}
+    }
     bake(group);
     this.root.add(group);
     this.streetlights.set(key, lights);
     this.chunks.set(key, group);
-    this.vegetationChunks.add(key);
+    this.createdChunks++;
+    this.chunkBusStops.set(key,stops);
+    this.busStopPositions = [...this.chunkBusStops.values()].flat();
+    this.maxChunkMilliseconds = Math.max(this.maxChunkMilliseconds,performance.now()-began);
   }
-  updateStreaming(position: Vec2, immediate = false) {
+  updateStreaming(position: Vec2, immediate = false, lookahead?: Vec2) {
+    if (this.tile.id.startsWith("corridor-")) {
+      const block=this.tile.terrain ? this.tile.terrain.step*4 : 512;
+      const x=Math.floor(position.x/block)*block, z=Math.floor(position.z/block)*block;
+      if (x!==this.groundBase.x || z!==this.groundBase.z) {
+        this.groundBase={x,z}; this.ground.position.set(x,0,z);
+        if (this.tile.terrain) {
+          const p=this.ground.geometry.getAttribute("position");
+          for(let i=0;i<p.count;i++)p.setY(i,this.height(p.getX(i)+x,p.getZ(i)+z));
+          p.needsUpdate=true;this.ground.geometry.computeVertexNormals();this.ground.geometry.computeBoundingSphere();
+        }
+      }
+    }
     const cx = Math.floor(position.x / SIZE),
       cz = Math.floor(position.z / SIZE),
       key = `${cx},${cz}`,
@@ -843,11 +861,18 @@ export class World {
           const k = `${cx + dx},${cz + dz}`;
           this.wanted.add(k);
         }
+      if (lookahead) {
+        const ax = Math.floor(lookahead.x / SIZE), az = Math.floor(lookahead.z / SIZE);
+        for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) this.wanted.add(`${ax+x},${az+z}`);
+      }
       for (const [k, g] of this.chunks)
         if (!this.wanted.has(k)) {
           disposeGroup(g);
           this.chunks.delete(k);
           this.streetlights.delete(k);
+          this.chunkBusStops.delete(k);
+          this.busStopPositions = [...this.chunkBusStops.values()].flat();
+          this.disposedChunks++;
         }
       this.queue = [...this.wanted]
         .filter((k) => !this.chunks.has(k))
@@ -864,6 +889,7 @@ export class World {
   nearestRoadName(position: Vec2) {
     return this.network.nearest(position)?.road.name ?? this.region.town;
   }
+  streamingStats() { return { created: this.createdChunks, disposed: this.disposedChunks, queued: this.queue.length, maxChunkMilliseconds: Math.round(this.maxChunkMilliseconds * 100)/100 }; }
   groundHit(ray: THREE.Raycaster) {
     const hit = ray.intersectObject(this.ground)[0];
     return hit ? { x: hit.point.x, z: hit.point.z } : undefined;
@@ -875,6 +901,7 @@ export class World {
       for (const g of this.chunks.values()) disposeGroup(g);
       this.chunks.clear();
       this.streetlights.clear();
+      this.chunkBusStops.clear(); this.busStopPositions = [];
       this.lastChunk = "";
     }
   }
@@ -882,5 +909,6 @@ export class World {
     disposeGroup(this.root);
     this.waterMaterial.dispose();
     this.chunks.clear();
+    this.chunkBusStops.clear(); this.busStopPositions = [];
   }
 }

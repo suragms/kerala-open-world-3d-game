@@ -45,7 +45,7 @@ export function WorldMapPanel({
       geography.places
         .filter(
           (p) =>
-            (category === "all" || p.kind === category) &&
+            (category === "all" || p.kind === category || category === "tourist" && ["attraction", "tourism", "landmark"].includes(p.kind)) &&
             (!query ||
               `${p.name} ${p.localName ?? ""} ${p.district} ${p.iata ?? ""}`
                 .toLowerCase()
@@ -136,6 +136,8 @@ export function WorldMapPanel({
               ["station", "Rail", TrainFront],
               ["airport", "Airports", Plane],
               ["bus_stop", "Bus stops", BusFront],
+              ["bus_station", "Bus stations", BusFront],
+              ["tourist", "Tourist destinations", TreePalm],
             ] as const
           ).map(([id, label, Icon]) => (
             <button
@@ -175,6 +177,7 @@ export function WorldMapPanel({
                   <small>
                     {geography.regions.find((r) => r.id === p.district)?.name} ·{" "}
                     {p.kind.replaceAll("_", " ")}
+                    {p.kind === "bus_station" ? " · C: procedural architecture" : ""}
                   </small>
                 </span>
                 <ArrowRight size={14} />

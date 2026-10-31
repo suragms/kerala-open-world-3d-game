@@ -12,7 +12,7 @@ async (page) => {
   await page.waitForFunction(
     () => !document.querySelector(".home-actions button").disabled,
   );
-  await page.screenshot({ path: "output/playwright/01-home.png" });
+  await page.screenshot({ path: "output/playwright/phase8-suite/01-home.png" });
   await page
     .getByRole("button", { name: "Begin your journey", exact: true })
     .click();
@@ -42,7 +42,7 @@ async (page) => {
     .click();
   await page.getByRole("button", { name: "Top option 2", exact: true }).click();
   await page.getByLabel("Hairstyle", { exact: true }).selectOption("long");
-  await page.screenshot({ path: "output/playwright/02-character.png" });
+  await page.screenshot({ path: "output/playwright/phase8-suite/02-character.png" });
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   const options = await page
     .getByRole("combobox", { name: "Starting district", exact: true })
@@ -55,11 +55,11 @@ async (page) => {
   await page
     .getByRole("combobox", { name: "Starting district", exact: true })
     .selectOption("thrissur");
-  await page.screenshot({ path: "output/playwright/03-location-map.png" });
+  await page.screenshot({ path: "output/playwright/phase8-suite/03-location-map.png" });
   await page.getByRole("button", { name: "Start game", exact: true }).click();
   await page.waitForFunction(() => window.__KOW__?.snapshot().chunks >= 20);
   await page.waitForTimeout(800);
-  await page.screenshot({ path: "output/playwright/04-thrissur.png" });
+  await page.screenshot({ path: "output/playwright/phase8-suite/04-thrissur.png" });
   const result = {
     characterChoiceRequired: true,
     maleSelected: true,
