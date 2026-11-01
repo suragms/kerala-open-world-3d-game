@@ -2,13 +2,13 @@ import * as THREE from "three";
 import { Human, VehicleModel, box, material, seeded } from "./assets";
 import type { VehicleKind } from "./assets";
 import { distance } from "./navigation";
-import type { Road } from "./navigation";
+import type { Road, CollisionBox } from "./navigation";
 import type { Vec2 } from "../types";
 import { World } from "./world";
-import { toLocal } from "../data/geography";
 import { RailShuttle } from "./rail";
 import { projectRoute, routeLengths, sampleRoute } from "./bus";
 import { TrafficStopDwell } from "./trafficStops";
+import { LaneMotion, laneLengths, lanePose, trafficBody, safeApproachSpeed, relativeTraffic, signalIsRed, crossingClear,trafficConnections,trafficNodeKey,CorridorReservation } from "./trafficLogic";
 
 export interface TrafficAgent {
   model: VehicleModel;
@@ -17,6 +17,7 @@ export interface TrafficAgent {
   t: number;
   speed: number;
   direction: number;
+  motion: LaneMotion;
 }
 export interface Pedestrian {
   human: Human;
@@ -32,30 +33,42 @@ export class TrafficManager {
   root = new THREE.Group();
   train?: THREE.Group;
   rail?: RailShuttle;
-  private trainPoints: Vec2[] = [];
-  private trainDistance = 0;
-  private trainLength = 0;
   private trainAltitude = 0;
   private stopDwell = new TrafficStopDwell();
-  private trainDwellUntil = 0;
-  private stationPositions: Vec2[] = [];
   private relocationTime=0;
-  constructor(public world: World) {
+  private connections=new Map<string,{road:Road;metres:number;direction:number}[]>();
+  private signals:Vec2[];
+  private reservation?:CorridorReservation;
+  clearReservation(){this.reservation=undefined;}
+  private key=trafficNodeKey;
+  get bodies():CollisionBox[]{return this.agents.map(a=>({source:"traffic",center:a.motion.position,yaw:a.motion.yaw,halfWidth:a.motion.body.halfWidth,halfLength:a.motion.body.halfLength,
+    minY:this.world.height(a.motion.position.x,a.motion.position.z),maxY:this.world.height(a.motion.position.x,a.motion.position.z)+a.motion.body.height}));}
+  staticBlocked(agent:TrafficAgent){const probe=this.world.collisions.withAdditionalBoxes([]);probe.boxes=probe.boxes.filter(b=>b.source!=="traffic");return probe.boxBlocked(agent.motion.position,agent.motion.yaw,agent.motion.body.halfWidth,agent.motion.body.halfLength);}
+  constructor(public world: World,corridor?:Vec2[]) {
     world.scene.add(this.root);
+    if(corridor?.length)this.reservation=new CorridorReservation(corridor);
+    this.signals=world.localFeatures.filter(f=>f.source.tags.highway==="traffic_signals").map(f=>f.center);
     const rng = seeded(world.region.id.length * 1821),
       roads = world.roads.filter((r) => r.width >= 6 && r.points.length > 2);
     const pool = roads.length ? roads : world.roads;
+    this.connections=trafficConnections(world.roads);
     const count = world.settings.quality === "low" ? 6 : 12;
-    for (let i = 0; i < count && pool.length; i++) {
+    for (let attempt = 0; this.agents.length < count && pool.length && attempt<count*30; attempt++) {
+      const i=this.agents.length;
       const road = pool[Math.floor(rng() * pool.length)],
         kind: VehicleKind =
-          i % 6 === 0
+          i % 9 === 0
             ? "Bus"
+            : i%9===1 ? "Truck" : i%9===2 ? "Delivery van" : i%9===3 ? "Tourist van" : i%9===5 ? "Motorcycle"
             : i % 4 === 0
               ? "Auto rickshaw"
               : i % 3 === 0
                 ? "Scooter"
                 : "Hatchback";
+      const direction=road.oneway?1:i%2?1:-1,metres=laneLengths(road).at(-1)!*(.15+rng()*.7),body=trafficBody(kind);
+      const pose=lanePose(road,metres,direction);
+      const probe=world.collisions.withAdditionalBoxes(this.reservation?.near(pose)??[]);
+      if(distance(pose,world.spawn)<55 || probe.boxBlocked(pose,pose.yaw,body.halfWidth,body.halfLength) || this.agents.some(a=>distance(a.motion.position,pose)<15))continue;
       const model = new VehicleModel(
         kind,
         ["#a0a89b", "#e4d6b7", "#386c62", "#aa6549", "#b2b4ad"][i % 5],
@@ -66,7 +79,8 @@ export class TrafficManager {
         segment: 1,
         t: rng(),
         speed: 4 + rng() * 4,
-        direction: road.oneway ? 1 : i % 2 ? 1 : -1,
+        direction,
+        motion:new LaneMotion(road,metres,direction,body),
       };
       this.agents.push(a);
       this.root.add(model.root);
@@ -88,7 +102,7 @@ export class TrafficManager {
         oz = ((b.x - a.x) / length) * (road.width / 2 + 1.7),
         pa = { x: a.x + ox, z: a.z + oz },
         pb = { x: b.x + ox, z: b.z + oz };
-      if (world.collisions.blocked(pa) || world.collisions.blocked(pb))
+      if (world.collisions.blocked(pa) || world.collisions.blocked(pb) || !world.collisions.segmentClear(pa,pb,.45))
         continue;
       const human = new Human({
         gender: i % 2 ? "female" : "male",
@@ -154,10 +168,6 @@ export class TrafficManager {
     this.trainAltitude = world.railways.includes(rail ?? []) ? 0 : 7.5;
     if (rail && world.region.id !== "idukki" && world.region.id !== "wayanad") {
       this.rail=new RailShuttle(rail,stations);
-      this.trainPoints = rail;
-      this.trainLength = rail
-        .slice(1)
-        .reduce((s, p, i) => s + distance(p, rail[i]), 0);
       this.train = new THREE.Group();
       for (let i = 0; i < 3; i++) {
         const coach = new THREE.Group();
@@ -178,17 +188,6 @@ export class TrafficManager {
       }
       this.root.add(this.train);
     }
-    // Station positions for train dwell behaviour
-    this.stationPositions = world.tile.features
-      .filter(
-        (f) =>
-          f.tags.railway === "station" ||
-          f.tags.railway === "halt" ||
-          f.tags.railway === "stop",
-      )
-      .flatMap((f) =>
-        f.points.map((p) => toLocal(p as [number, number], world.tile.origin)),
-      );
     // Airport passenger NPCs
     if (world.region.theme === "airport") {
       for (let i = 0; i < 3; i++) {
@@ -201,7 +200,7 @@ export class TrafficManager {
           x: world.spawn.x + Math.cos(angle) * 18,
           z: world.spawn.z + Math.sin(angle) * 18,
         };
-        if (world.collisions.blocked(a) || world.collisions.blocked(b)) continue;
+        if (world.collisions.blocked(a) || world.collisions.blocked(b) || !world.collisions.segmentClear(a,b,.45)) continue;
         const human = new Human({
           gender: i % 2 ? "female" : "male",
           skin: ["#8e5537", "#b57e55", "#c9a882"][i % 3],
@@ -224,109 +223,84 @@ export class TrafficManager {
       }
     }
   }
-  update(dt: number, time: number, player: Vec2) {
+  update(dt: number, time: number, player: Vec2,playerBody?:CollisionBox) {
     if(time>this.relocationTime){
       this.relocationTime=time+2;
       const nearest=this.world.network.nearest(player);
-      if(nearest){
-        for(const [index,agent] of this.agents.entries())if(distance(agent.model.root.position,player)>550){
-          const road=nearest.road;
-          const choices=road.points.map((p,i)=>({p,i})).filter(({p,i})=>i>0&&distance(p,player)>190&&distance(p,player)<320);
-          const target=choices[(index*7)%choices.length];
-          if(target){agent.road=road;agent.segment=target.i;agent.t=.5;agent.direction=road.oneway?1:index%2?1:-1;this.stopDwell.reset(agent);}
+      if(nearest)for(const [index,agent] of this.agents.entries())if(distance(agent.motion.position,player)>550){
+        const road=nearest.road, lengths=laneLengths(road);
+        const choices=road.points.map((p,i)=>({p,i})).filter(({p,i})=>i>0&&distance(p,player)>220&&distance(p,player)<320);
+        const target=choices[(index*7)%choices.length];
+        if(target){
+          const direction=road.oneway?1:index%2?1:-1,pose=lanePose(road,lengths[target.i],direction),body=agent.motion.body;
+          if(!this.world.collisions.withAdditionalBoxes(this.reservation?.near(pose)??[]).boxBlocked(pose,pose.yaw,body.halfWidth,body.halfLength)&&!this.agents.some(other=>other!==agent&&distance(other.motion.position,pose)<18)){
+            agent.motion=new LaneMotion(road,lengths[target.i],direction,body);this.stopDwell.reset(agent);
+          }
         }
       }
     }
-    for (const agent of this.agents) {
-      const { road, model } = agent;
-      let a = road.points[agent.segment - 1],
-        b = road.points[agent.segment],
-        len = distance(a, b) || 1;
-      const close = this.agents.some(
-        (other) =>
-          other !== agent &&
-          other.road === road &&
-          other.direction === agent.direction &&
-          distance(other.model.root.position, model.root.position) < 10 &&
-          ((other.segment - agent.segment) * agent.direction > 0 ||
-            (other.t - agent.t) * agent.direction > 0),
-      );
-      const playerClose = distance(model.root.position, player) < 4;
-      const signal =
-        road.points.length > 4 &&
-        agent.segment % 7 === 0 &&
-        Math.floor(time / 9) % 2 === 0 &&
-        agent.t > 0.72;
-
-      // Bus dwell at bus stops
-      let atBusStop = false;
-      if (agent.model.kind === "Bus") {
-        const currentPos = {
-          x: road.points[agent.segment - 1]?.x ?? 0,
-          z: road.points[agent.segment - 1]?.z ?? 0,
-        };
-        const nearStop = this.world.busStopPositions.some(s => distance(s, currentPos) < 12);
-        atBusStop = this.stopDwell.waiting(agent, `${road.id}:${agent.segment}:${agent.direction}`,
-          nearStop && agent.t > 0.3 && agent.t < 0.75, time);
+    const staticBoxes=this.world.collisions.boxes.filter(b=>b.source!=="traffic");
+    const bodies=this.bodies;
+    const pedestrianVehicles=this.agents.map(a=>({position:a.motion.position,yaw:a.motion.yaw,speed:a.motion.speed,body:a.motion.body}));
+    for (const [index,agent] of this.agents.entries()) {
+      const {motion,model}=agent;
+      const lengths=laneLengths(motion.road),remaining=motion.direction>0?lengths.at(-1)!-motion.metres:motion.metres;
+      if(remaining<.6){
+        const endpoint=motion.direction>0?motion.road.points.at(-1)!:motion.road.points[0];
+        const options=(this.connections.get(this.key(endpoint))??[]).filter(c=>c.road.width>motion.body.halfWidth*2+.4 && (c.road!==motion.road || distance(motion.road.points[0],motion.road.points.at(-1)!)<.01&&c.direction===motion.direction));
+        options.sort((a,b)=>{
+          const angle=(c:typeof a)=>{const p=lanePose(c.road,c.metres+c.direction*.1,c.direction);return Math.abs(Math.atan2(Math.sin(p.yaw-motion.yaw),Math.cos(p.yaw-motion.yaw)));};
+          return angle(a)-angle(b);
+        });
+        const next=options[0];if(next)motion.continueOn(next.road,next.metres,next.direction);
       }
-
-      const rate = atBusStop || close || playerClose || signal ? 0 : agent.speed;
-      agent.t += (agent.direction * rate * dt) / len;
-      if (agent.t > 1) {
-        agent.t = 0;
-        agent.segment++;
-        if (agent.segment >= road.points.length) {
-          agent.segment = 1;
-          agent.t = 0;
+      let target=agent.speed,reason:typeof motion.phase="cruising";
+      const limit=(speed:number,phase:typeof reason)=>{if(speed<target){target=speed;reason=phase;}};
+      for(const other of this.agents)if(other!==agent){
+        const relative=relativeTraffic(motion.position,motion.yaw,other.motion.position);
+        if(relative.ahead>0&&Math.abs(relative.side)<motion.body.halfWidth+other.motion.body.halfWidth+.5){
+          const aligned=Math.cos(other.motion.yaw-motion.yaw)>.65;
+          const gap=relative.ahead-motion.body.halfLength-other.motion.body.halfLength-2;
+          limit(Math.min(safeApproachSpeed(gap,aligned?other.motion.speed:0),Math.max(0,gap/1.2)),aligned?"following":"yielding");
         }
       }
-      if (agent.t < 0) {
-        agent.segment--;
-        agent.t = 1;
-        if (agent.segment < 1) {
-          agent.segment = road.points.length - 1;
-          agent.t = 1;
-        }
+      const toPlayer=relativeTraffic(motion.position,motion.yaw,player);
+      const playerRadius=playerBody?Math.hypot(playerBody.halfWidth,playerBody.halfLength):1;
+      if(toPlayer.ahead>0&&Math.abs(toPlayer.side)<motion.body.halfWidth+playerRadius)limit(safeApproachSpeed(toPlayer.ahead-motion.body.halfLength-playerRadius-2),"yielding");
+      for(const p of this.pedestrians){const r=relativeTraffic(motion.position,motion.yaw,p.human.root.position);
+        if(p.human.root.visible&&r.ahead>0&&Math.abs(r.side)<motion.body.halfWidth+.8)limit(safeApproachSpeed(r.ahead-motion.body.halfLength-2),"crossing");}
+      for(const signal of this.signals){const r=relativeTraffic(motion.position,motion.yaw,signal);
+        if(r.ahead>0&&r.ahead<65&&Math.abs(r.side)<motion.road.width&&signalIsRed(time,signal))limit(safeApproachSpeed(r.ahead-motion.body.halfLength-2),"signal");}
+      if(model.kind==="Bus"){
+        const nearStop=this.world.busStopPositions.find(s=>distance(s,motion.position)<12);
+        if(this.stopDwell.waiting(agent,nearStop?this.key(nearStop):"",Boolean(nearStop),time))limit(0,"bus-stop");
       }
-      a = road.points[agent.segment - 1];
-      b = road.points[agent.segment];
-      len = distance(a, b) || 1;
-      const dx = (b.x - a.x) / len,
-        dz = (b.z - a.z) / len,
-        lane = Math.min(2, road.width * 0.24);
-      const x = a.x + (b.x - a.x) * agent.t + dz * lane * agent.direction,
-        z = a.z + (b.z - a.z) * agent.t - dx * lane * agent.direction;
-      model.root.position.set(x, this.world.height(x, z), z);
-      model.root.rotation.y = Math.atan2(
-        -dx * agent.direction,
-        -dz * agent.direction,
-      );
-      model.root.visible = distance(player, model.root.position) < 330;
-      model.animate(rate, rate === 0, dt);
+      const probe=this.world.collisions.withAdditionalBoxes([]);
+      probe.boxes=[...staticBoxes,...bodies.filter((_,i)=>i!==index),...this.reservation?.near(motion.position)??[],playerBody??{center:player,yaw:0,halfWidth:.55,halfLength:.55}];
+      motion.update(dt,target,probe,reason);
+      agent.road=motion.road;agent.direction=motion.direction;agent.segment=motion.segment;agent.t=motion.t;
+      model.root.position.set(motion.position.x,this.world.height(motion.position.x,motion.position.z),motion.position.z);
+      model.root.rotation.y=-motion.yaw;
+      model.root.visible=distance(player,motion.position)<330;
+      model.animate(motion.speed,motion.phase!=="cruising",dt);
     }
     for (const p of this.pedestrians) {
-      const len = distance(p.a, p.b) || 1;
-      if (((Math.floor(time + p.a.x) % 15) + 15) % 15 > 2)
-        p.progress += (p.direction * dt * 0.85) / len;
-      if (p.progress > 1) {
-        p.progress = 1;
-        p.direction = -1;
+      const len=distance(p.a,p.b)||1;
+      if(!p.human.root.userData.placed){
+        const x=p.a.x+(p.b.x-p.a.x)*p.progress,z=p.a.z+(p.b.z-p.a.z)*p.progress;
+        p.human.root.position.set(x,this.world.height(x,z),z);p.human.root.userData.placed=true;
       }
-      if (p.progress < 0) {
-        p.progress = 0;
-        p.direction = 1;
-      }
-      const x = p.a.x + (p.b.x - p.a.x) * p.progress,
-        z = p.a.z + (p.b.z - p.a.z) * p.progress;
-      const valid = !this.world.collisions.blocked({ x, z });
-      if (valid) p.human.root.position.set(x, this.world.height(x, z), z);
-      p.human.root.rotation.y = Math.atan2(
-        (p.b.x - p.a.x) * p.direction,
-        (p.b.z - p.a.z) * p.direction,
-      );
-      p.human.animate(time, 0.85, 0);
-      p.human.root.visible =
-        valid && distance(player, p.human.root.position) < 180;
+      const walking=(((Math.floor(time+p.a.x)%15)+15)%15>2);
+      const next=Math.max(0,Math.min(1,p.progress+(walking?p.direction*dt*.85/len:0)));
+      const target={x:p.a.x+(p.b.x-p.a.x)*next,z:p.a.z+(p.b.z-p.a.z)*next};
+      const from=p.human.root.position;
+      const clear=crossingClear(target,pedestrianVehicles)&&this.world.collisions.segmentClear(from,target,.45);
+      const moved=clear?distance(from,target):0;
+      if(clear){p.progress=next;p.human.root.position.set(target.x,this.world.height(target.x,target.z),target.z);}
+      if(p.progress>=1)p.direction=-1;if(p.progress<=0)p.direction=1;
+      p.human.root.rotation.y=Math.atan2((p.b.x-p.a.x)*p.direction,(p.b.z-p.a.z)*p.direction);
+      p.human.animate(time,dt>0?moved/dt:0,0);
+      p.human.root.visible=distance(player,p.human.root.position)<180;
     }
     if (this.train && this.rail) {
       this.rail.update(dt);

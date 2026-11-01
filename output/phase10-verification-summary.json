@@ -1,0 +1,448 @@
+{
+  "date": "2026-11-01",
+  "inspectedCommit": "66a1347c609ef70d2a231f8146c715a8bacbe72a",
+  "branch": "codex/phase10-kerala-realism",
+  "phase9Baseline": {
+    "unitTests": 74,
+    "browserWorkflows": 18,
+    "npmCi": true,
+    "build": true,
+    "geography": true
+  },
+  "phase10": {
+    "unitTests": 101,
+    "browserWorkflows": 20,
+    "build": true,
+    "geography": true,
+    "productionCheck": true
+  },
+  "browserResults": [
+    {
+      "check": "bus-full",
+      "passed": true,
+      "seconds": 66.285,
+      "artifact": "output/playwright/phase10-focused-final/bus-full.json"
+    },
+    {
+      "check": "bus-interdistrict",
+      "passed": true,
+      "seconds": 263.766,
+      "artifact": "output/playwright/phase10-focused-final/bus-interdistrict.json"
+    },
+    {
+      "check": "phase10-female",
+      "passed": true,
+      "seconds": 82.69,
+      "artifact": "output/playwright/phase10-last-fixes/phase10-female.json"
+    },
+    {
+      "check": "districts",
+      "passed": true,
+      "seconds": 38.139,
+      "artifact": "output/playwright/phase10-regression-final/districts.json"
+    },
+    {
+      "check": "controls",
+      "passed": true,
+      "seconds": 23.879,
+      "artifact": "output/playwright/phase10-last-fixes/controls.json"
+    },
+    {
+      "check": "mouse-driving",
+      "passed": true,
+      "seconds": 21.883,
+      "artifact": "output/playwright/phase10-regression-final/mouse-driving.json"
+    },
+    {
+      "check": "gamepad",
+      "passed": true,
+      "seconds": 41.581,
+      "artifact": "output/playwright/phase10-regression-final/gamepad.json"
+    },
+    {
+      "check": "transport",
+      "passed": true,
+      "seconds": 32.467,
+      "artifact": "output/playwright/phase10-regression-final/transport.json"
+    },
+    {
+      "check": "settings",
+      "passed": true,
+      "seconds": 16.03,
+      "artifact": "output/playwright/phase10-regression-final/settings.json"
+    },
+    {
+      "check": "movement-edges",
+      "passed": true,
+      "seconds": 30.636,
+      "artifact": "output/playwright/phase10-regression-final/movement-edges.json"
+    },
+    {
+      "check": "performance",
+      "passed": true,
+      "seconds": 18.993,
+      "artifact": "output/playwright/phase10-regression-final/performance.json"
+    },
+    {
+      "check": "final-review",
+      "passed": true,
+      "seconds": 10.566,
+      "artifact": "output/playwright/phase10-regression-final/final-review.json"
+    },
+    {
+      "check": "phase8",
+      "passed": true,
+      "seconds": 42.768,
+      "artifact": "output/playwright/phase10-regression-final/phase8.json"
+    },
+    {
+      "check": "bus-stop",
+      "passed": true,
+      "seconds": 32.699,
+      "artifact": "output/playwright/phase10-regression-final/bus-stop.json"
+    },
+    {
+      "check": "rail",
+      "passed": true,
+      "seconds": 12.856,
+      "artifact": "output/playwright/phase10-regression-final/rail.json"
+    },
+    {
+      "check": "phase9",
+      "passed": true,
+      "seconds": 25.53,
+      "artifact": "output/playwright/phase10-regression-final/phase9.json"
+    },
+    {
+      "check": "acceptance",
+      "passed": true,
+      "seconds": 77.203,
+      "artifact": "output/playwright/phase10-regression-final/acceptance.json"
+    },
+    {
+      "check": "loading-recovery",
+      "passed": true,
+      "seconds": 11.205,
+      "artifact": "output/playwright/phase10-regression-final/loading-recovery.json"
+    },
+    {
+      "check": "phase10",
+      "passed": true,
+      "seconds": 20.653,
+      "artifact": "output/playwright/phase10-last-fixes/phase10.json"
+    },
+    {
+      "check": "character-movement",
+      "passed": true,
+      "seconds": 80.216,
+      "artifact": "output/playwright/phase10-last-fixes/character-movement.json"
+    }
+  ],
+  "geography": {
+    "districts": 14,
+    "rawPlaces": 3435,
+    "stations": 181,
+    "busStations": 59,
+    "corridors": 5,
+    "routeFlags": {
+      "thrissur-guruvayur": [],
+      "ernakulam-aluva": [],
+      "thrissur-ernakulam": [
+        {
+          "source": "https://www.openstreetmap.org/way/993859557",
+          "type": "water polygon crossing",
+          "metres": 73600,
+          "bridge": true
+        }
+      ],
+      "kozhikode-kannur": [],
+      "kottayam-ernakulam": [
+        {
+          "source": "https://www.openstreetmap.org/way/507367984",
+          "type": "water polygon crossing",
+          "metres": 33480,
+          "bridge": true
+        },
+        {
+          "source": "https://www.openstreetmap.org/way/1312327375",
+          "type": "water polygon crossing",
+          "metres": 64490,
+          "bridge": true
+        }
+      ]
+    }
+  },
+  "hardware": {
+    "ramGiB": 15.58,
+    "physicalControllerTested": false,
+    "fourGiBHardwareTested": false
+  },
+  "performance": {
+    "method": "Actual requestAnimationFrame intervals during 30-second moving scenes and a 60-second live bus journey, fixed resolution with adaptive resolution disabled when available. No deterministic clock used during timed measurement; no hardware performance guarantee.",
+    "viewport": [
+      1440,
+      900
+    ],
+    "quality": "medium",
+    "adaptiveResolution": false,
+    "ramGiB": 15.58,
+    "renderer": "ANGLE (Intel, Intel(R) Arc(TM) 130V GPU (8GB) (0x000064A0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "fixtureSHA256": "60b880f06905812af179457c54637377bfc7ebdf666b2e6ea8de95a09fbdab60",
+    "scenarios": [
+      {
+        "name": "dense-urban",
+        "before": {
+          "averageFPS": 60.03504820794381,
+          "onePercentLowFPS": 59.226932668325624,
+          "p50Ms": 16.69999999999709,
+          "p95Ms": 16.80000000000109,
+          "p99Ms": 16.80000000000291,
+          "framesOver50Ms": 0,
+          "longTasks": 0,
+          "maxLongTaskMs": 0,
+          "heapMiB": 218,
+          "drawCalls": 388,
+          "triangles": 200309,
+          "geometries": 340,
+          "textures": 6,
+          "maxStreamingSliceMs": 5,
+          "maxWholeChunkCpuMs": 20.8,
+          "meanWholeChunkCpuMs": 13.896000000834466,
+          "rendererCpuMaxMs": 97.29999999701977,
+          "chunks": 25,
+          "resolutionScale": 1
+        },
+        "after": {
+          "averageFPS": 60.03584826456349,
+          "onePercentLowFPS": 59.06123717749475,
+          "p50Ms": 16.69999999999709,
+          "p95Ms": 16.80000000000291,
+          "p99Ms": 16.80000000000291,
+          "framesOver50Ms": 0,
+          "longTasks": 0,
+          "maxLongTaskMs": 0,
+          "heapMiB": 295,
+          "drawCalls": 390,
+          "triangles": 300452,
+          "geometries": 326,
+          "textures": 6,
+          "maxStreamingSliceMs": 10.6,
+          "maxWholeChunkCpuMs": 51,
+          "meanWholeChunkCpuMs": 29.70000000178814,
+          "rendererCpuMaxMs": 93.40000000596046,
+          "chunks": 25,
+          "resolutionScale": 1
+        }
+      },
+      {
+        "name": "rural-coast",
+        "before": {
+          "averageFPS": 60.03404816716848,
+          "onePercentLowFPS": 59.33791380386503,
+          "p50Ms": 16.69999999999709,
+          "p95Ms": 16.80000000000291,
+          "p99Ms": 16.80000000000291,
+          "framesOver50Ms": 0,
+          "longTasks": 0,
+          "maxLongTaskMs": 0,
+          "heapMiB": 124,
+          "drawCalls": 179,
+          "triangles": 186736,
+          "geometries": 305,
+          "textures": 5,
+          "maxStreamingSliceMs": 7,
+          "maxWholeChunkCpuMs": 9.3,
+          "meanWholeChunkCpuMs": 4.349999999503295,
+          "rendererCpuMaxMs": 87,
+          "chunks": 25,
+          "resolutionScale": 1
+        },
+        "after": {
+          "averageFPS": 60.018328751151515,
+          "onePercentLowFPS": 58.85997521684538,
+          "p50Ms": 16.69999999999709,
+          "p95Ms": 16.80000000000291,
+          "p99Ms": 16.900000000001455,
+          "framesOver50Ms": 0,
+          "longTasks": 0,
+          "maxLongTaskMs": 0,
+          "heapMiB": 131,
+          "drawCalls": 208,
+          "triangles": 155037,
+          "geometries": 238,
+          "textures": 4,
+          "maxStreamingSliceMs": 8,
+          "maxWholeChunkCpuMs": 13.6,
+          "meanWholeChunkCpuMs": 5.466666663189729,
+          "rendererCpuMaxMs": 103,
+          "chunks": 25,
+          "resolutionScale": 1
+        }
+      },
+      {
+        "name": "hill-terrain",
+        "before": {
+          "averageFPS": 60.01612870979371,
+          "onePercentLowFPS": 59.042883778744034,
+          "p50Ms": 16.69999999999709,
+          "p95Ms": 16.80000000000291,
+          "p99Ms": 16.80000000000291,
+          "framesOver50Ms": 0,
+          "longTasks": 0,
+          "maxLongTaskMs": 0,
+          "heapMiB": 89,
+          "drawCalls": 94,
+          "triangles": 87028,
+          "geometries": 259,
+          "textures": 6,
+          "maxStreamingSliceMs": 7.5,
+          "maxWholeChunkCpuMs": 11.4,
+          "meanWholeChunkCpuMs": 5.8333333348234495,
+          "rendererCpuMaxMs": 83.6000000089407,
+          "chunks": 25,
+          "resolutionScale": 1
+        },
+        "after": {
+          "averageFPS": 60.01592871402415,
+          "onePercentLowFPS": 59.15317559152962,
+          "p50Ms": 16.69999999999709,
+          "p95Ms": 16.80000000000291,
+          "p99Ms": 16.80000000000291,
+          "framesOver50Ms": 0,
+          "longTasks": 0,
+          "maxLongTaskMs": 0,
+          "heapMiB": 140,
+          "drawCalls": 98,
+          "triangles": 95355,
+          "geometries": 267,
+          "textures": 6,
+          "maxStreamingSliceMs": 8,
+          "maxWholeChunkCpuMs": 25.2,
+          "meanWholeChunkCpuMs": 7.989999997615814,
+          "rendererCpuMaxMs": 91.29999999701977,
+          "chunks": 25,
+          "resolutionScale": 1
+        }
+      },
+      {
+        "name": "active-bus",
+        "before": {
+          "averageFPS": 60.00716553212705,
+          "onePercentLowFPS": 59.30437570119461,
+          "p50Ms": 16.699999999982538,
+          "p95Ms": 16.80000000000291,
+          "p99Ms": 16.800000000017462,
+          "framesOver50Ms": 0,
+          "longTasks": 0,
+          "maxLongTaskMs": 0,
+          "heapMiB": 163,
+          "drawCalls": 308,
+          "triangles": 128040,
+          "geometries": 863,
+          "textures": 12,
+          "maxStreamingSliceMs": 4.2,
+          "maxWholeChunkCpuMs": 26.3,
+          "meanWholeChunkCpuMs": 12.030000003799795,
+          "rendererCpuMaxMs": 129.70000000298023,
+          "chunks": 25,
+          "resolutionScale": 1
+        },
+        "after": {
+          "averageFPS": 60.01636658483672,
+          "onePercentLowFPS": 59.09599105573447,
+          "p50Ms": 16.699999999982538,
+          "p95Ms": 16.80000000000291,
+          "p99Ms": 16.800000000017462,
+          "framesOver50Ms": 0,
+          "longTasks": 0,
+          "maxLongTaskMs": 0,
+          "heapMiB": 185,
+          "drawCalls": 321,
+          "triangles": 190317,
+          "geometries": 785,
+          "textures": 13,
+          "maxStreamingSliceMs": 7.6,
+          "maxWholeChunkCpuMs": 35.1,
+          "meanWholeChunkCpuMs": 20.472500005364417,
+          "rendererCpuMaxMs": 126.09999999403954,
+          "chunks": 25,
+          "resolutionScale": 1
+        }
+      }
+    ]
+  },
+  "changedFiles": [
+    ".github/workflows/ci.yml",
+    ".gitignore",
+    "PHASE10_FINDINGS.md",
+    "PHASE10_IMPLEMENTATION_REPORT.md",
+    "PHASE10_VISUAL_REFERENCES.md",
+    "README.md",
+    "output/ARTIFACT_POLICY.md",
+    "output/phase10-verification-summary.json",
+    "scripts/browser-suite.mjs",
+    "scripts/production-check.mjs",
+    "src/game/assets.ts",
+    "src/game/buildings.ts",
+    "src/game/bus.ts",
+    "src/game/busModels.ts",
+    "src/game/engine.ts",
+    "src/game/input.ts",
+    "src/game/landmarks.ts",
+    "src/game/navigation.ts",
+    "src/game/performance.ts",
+    "src/game/regional.ts",
+    "src/game/save.ts",
+    "src/game/terminals.ts",
+    "src/game/traffic.ts",
+    "src/game/trafficLogic.ts",
+    "src/game/vehicle.ts",
+    "src/game/world.ts",
+    "src/styles.css",
+    "src/types.ts",
+    "src/ui/GameView.tsx",
+    "src/ui/Map.tsx",
+    "src/ui/SettingsPanel.tsx",
+    "src/ui/WorldMapPanel.tsx",
+    "tests/browser-bus-interdistrict.js",
+    "tests/browser-bus-stop.js",
+    "tests/browser-districts.js",
+    "tests/browser-performance-long.js",
+    "tests/browser-phase10-female.js",
+    "tests/browser-phase10.js",
+    "tests/exit-recovery.test.ts",
+    "tests/input.test.ts",
+    "tests/phase10-buildings.test.ts",
+    "tests/phase10-geometry.test.ts",
+    "tests/phase10-rendering.test.ts",
+    "tests/phase10.test.ts",
+    "tests/traffic-logic.test.ts",
+    "tests/traffic-manager.test.ts"
+  ],
+  "runtimeSourceSHA256": {
+    "src/game/assets.ts": "0f33b7c30e1a2c831bff8d56d7ae8394759ea7b85f94f4308933bd1a2edf9af6",
+    "src/game/buildings.ts": "7220303a2684abeb31132f92daa892b6bab6ad4b2f02dbd6294301a5f7b5a711",
+    "src/game/bus.ts": "002fe0db5d99732340f8f937e0455183ed85a782e6880e5794fc9247ea8f156a",
+    "src/game/busModels.ts": "5afa4c8416c2b9fdf697912c8de2643bab2f881c19c3d9247f68789c6b71ab14",
+    "src/game/engine.ts": "c32159dadec1017d17ccf477e3a2df1d1d8d9b3773f93cec126a0dca3e2700a0",
+    "src/game/input.ts": "ae8655b2349db57d745016918a73028ce643d128bf392e109c103e2d83614557",
+    "src/game/landmarks.ts": "1c501af74957c68085ecf5af4fca250b19970d27cc3ba14201d4f7b8b863b635",
+    "src/game/navigation.ts": "5641d46ad20f3bfa972e02d09864119b7e519e5eb28ac96cf54d66a45cdfc15f",
+    "src/game/performance.ts": "23920be766611ec21fd4f310363ca5868eaf7b5b70cb2db3da58401cc9b5aa96",
+    "src/game/regional.ts": "d4acc25f1408d6d32e3a9d9c2f8785136d3dc63b532e4343089055d4a3809d23",
+    "src/game/save.ts": "3fb25071986ec44bd3276a3dd2f3b5aa7c8b6d604b8598d98b2231fe350b92de",
+    "src/game/terminals.ts": "d9f4083f9bf630baa9b1dc4a9c26b9d45d0e7ef952235eba21a02928762aaaef",
+    "src/game/traffic.ts": "273d6588a4844060262c9301b45491797a8e28f72367f7cf6750c463b47f08e7",
+    "src/game/trafficLogic.ts": "100247aa9b25377a9b29604edbad876018da0b3cfb5b9cddd3f7d28530f7357d",
+    "src/game/vehicle.ts": "1eebd8065a389f245b3e8b0c6baf5a1de1ee3e55c84ebae07389befc3aa4c1f6",
+    "src/game/world.ts": "4ced0e240147a6bb049983b1e0268b5a99bffbe937a07a1f8ae37666d0c03eae",
+    "src/styles.css": "b4a667f65f27129f1065086f43ae702b7b1a80b2da53841007604e770bfe6971",
+    "src/types.ts": "8273f78392e72c4655fe413248f78bbcdc3dd7a7e4d78351d07ec4a2c51deb99",
+    "src/ui/GameView.tsx": "26a0c26893085b172a7ca059ad6bc9e121b2af684479b739792e73d202dd7d57",
+    "src/ui/Map.tsx": "0e7a1c835c8f7d86214355072d27b411854b7cdeea831d3711b21c9f1ff24781",
+    "src/ui/SettingsPanel.tsx": "ec52cf31293c6873fa2142a3fa6b2b053df46a9bfe0504b93236252384911253",
+    "src/ui/WorldMapPanel.tsx": "af5a39e67c8bcf6bdbc03e105d6c03e176c13f7dc854f0a5ddaa26e6310e5cfd"
+  },
+  "benchmarkFixtureSHA256": "60b880f06905812af179457c54637377bfc7ebdf666b2e6ea8de95a09fbdab60"
+}

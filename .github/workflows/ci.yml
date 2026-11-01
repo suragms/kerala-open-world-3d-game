@@ -23,11 +23,13 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
         env:
-          BROWSER_CHECKS: mouse-driving,gamepad,districts,phase8,bus-stop,rail,bus-full,phase9,loading-recovery
+          BROWSER_CHECKS: mouse-driving,gamepad,districts,phase8,bus-stop,rail,bus-full,bus-interdistrict,phase9,loading-recovery,phase10,phase10-female
       - run: npm run test:production
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: browser-diagnostics
-          path: output/playwright/phase9*/
+          path: |
+            output/playwright/phase9*/
+            output/playwright/phase10*/
           retention-days: 14

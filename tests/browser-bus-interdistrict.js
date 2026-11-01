@@ -21,7 +21,8 @@ async(page)=>{
   for(let i=0;i<400;i++){
     const step=await advance(),bus=step.snapshot.bus;districts.add(step.snapshot.district);step.phases.forEach(p=>phases.add(p));
     if(bus.mode!=='full')throw new Error('Inter-district Full Journey changed mode');
-    if(i%60===0){samples.push({iteration:i,position:step.snapshot.position,district:step.snapshot.district,bus,perf:step.perf});await page.screenshot({path:`output/playwright/phase8-suite/phase8-interdistrict-${i}.png`});}
+    if(i%60===0){samples.push({iteration:i,position:step.snapshot.position,district:step.snapshot.district,bus,perf:step.perf,controls:await page.evaluate(()=>({traffic:window.__KOW__.controls().traffic,cameraClear:window.__KOW__.controls().cameraClear,terrainClearance:window.__KOW__.controls().terrainClearance}))});await page.screenshot({path:`output/playwright/phase8-suite/phase8-interdistrict-${i}.png`});}
+    if(i>0&&i%60===0)await page.getByRole('region',{name:'Bus journey',exact:true}).getByRole('button',{name:'Change camera',exact:true}).click();
     if(bus.phase==='arrived')break;
     stationary=Math.abs(bus.progress-last)<.00001?stationary+1:0;last=bus.progress;
     if(stationary>8)throw new Error(`Coach stopped making progress at ${JSON.stringify(step.snapshot.position)}`);
@@ -30,5 +31,10 @@ async(page)=>{
   await page.getByRole('button',{name:'Exit at stop',exact:true}).click();await page.waitForFunction(()=>window.__KOW__.snapshot().bus.phase==='exited');
   const blocked=await page.evaluate(()=>window.__KOW__.diagnostics().blocked);if(blocked||errors.length)throw new Error('Invalid inter-district exit or browser error');
   await page.screenshot({path:'output/playwright/phase8-suite/phase8-interdistrict-arrival.png'});
-  return {clock:'Accelerated normal simulation, Full Journey throughout',route:'thrissur-ernakulam',districts:[...districts],phases:[...phases],before,samples,arrived,after:await state(),blocked,errors};
+  await page.getByRole('button',{name:'Save game',exact:true}).click();
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('kow.save.v2')));
+  await page.reload();await page.locator('.continue-button').click();await page.waitForFunction(()=>!!window.__KOW__?.snapshot());
+  const restored=await state();
+  if(Math.hypot(restored.position.x-saved.position.x,restored.position.z-saved.position.z)>5 || restored.district!=='ernakulam' || restored.locality!==saved.locality)throw new Error('Inter-district checkpoint did not restore');
+  return {restored,clock:'Accelerated normal simulation, Full Journey throughout',route:'thrissur-ernakulam',districts:[...districts],phases:[...phases],before,samples,arrived,after:await state(),blocked,errors};
 }

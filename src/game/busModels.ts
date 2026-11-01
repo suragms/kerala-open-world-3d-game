@@ -62,7 +62,7 @@ export class PassengerBusModel {
     for (const x of [-1.33,1.33]) {
       box(root, palette.white, x, type === "private" ? 1.7 : 1.3, 0.5, 0.04, type === "private" ? 0.24 : 0.12, 7.5);
       if (type === "fast") box(root,palette.white,x,1.58,1.5,0.04,0.18,4);
-      if (type === "coach") box(root,material("#2e4d5a"),x,2.48,0,0.04,0.58,7.2);
+      if (type === "coach") box(root,material("#2e4d5a"),x,2.98,0,0.04,0.1,7.2);
     }
     if (type === "coach") box(root,material("#bac3bd"),0,3.35,1.5,1.5,0.35,2.4);
     sign(root,label,0,1.7,4.62,1.8,"ORIGINAL GAME DESIGN");
@@ -137,6 +137,11 @@ export function stationModel(station: BusStation, compact: boolean) {
   sign(root, "TICKETS · INFORMATION", -8 * size, 2.3, 3.85 * size, 4 * size, "ടിക്കറ്റ് · വിവരങ്ങൾ");
   sign(root, "TEA · ചായ", 8 * size, 2.3, 3.85 * size, 3 * size, "LOCAL SHOP");
   sign(root, "IN-GAME SERVICES", 0, 2.3, 3.85 * size, 4 * size, "Select destination at the bay");
+  // Level C circulation markings stay inside the procedural facility; they do not invent mapped roads.
+  for(const x of [-12,-4,4,12])box(root,material("#e1d2a2"),x*size,.18,-3.8*size,.14,.025,6*size);
+  box(root,material("#bdad89"),0,.18,3*size,27*size,.025,1.3*size);
+  if(!compact)for(const x of [-8,0,8])for(let i=0;i<3;i++)box(root,material("#e5d5a8"),x-1.8,.32,-1-i*.85,.55,.025,.3);
+  sign(root,"WAIT BEHIND BAY LINE",0,2.4,-5.4*size,5*size,"Board when doors open · simulated service");
   for (const x of [-15, 15]) {
     cylinder(root, palette.dark, x * size, 4, -3, 0.08, 8);
     box(root, material("#ead8a1"), x * size, 8, -3, 0.7, 0.12, 0.4);

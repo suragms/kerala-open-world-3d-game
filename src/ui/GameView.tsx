@@ -437,7 +437,7 @@ export function GameView({
                   <Footprints size={17} />{" "}
                   {snapshot.runEnabled ? "Run on" : "Run"}
                 </button>
-                {snapshot.destination ? (
+                {settings.movement === "mouse" || snapshot.destination ? (
                   <button
                     onClick={() => engine.current?.action("stop")}
                     aria-label="Stop moving"
@@ -511,6 +511,7 @@ export function GameView({
             {snapshot.fps} FPS <span /> {settings.quality.toUpperCase()}{" "}
             <span /> {snapshot.chunks} CHUNKS
           </div>
+          {snapshot.streaming && snapshot.streaming.progress<1 ? <div className="scenery-progress" role="status">Nearby scenery · {Math.round(snapshot.streaming.progress*100)}%<progress aria-label="Nearby scenery loaded" max={1} value={snapshot.streaming.progress} /></div>:null}
           <a
             className="game-attribution"
             href="https://www.openstreetmap.org/copyright"
@@ -530,7 +531,7 @@ export function GameView({
 function BusJourneyHUD({ snapshot, action, walk, map }: { snapshot: Snapshot; action: (name: string) => void; walk: () => void; map: () => void }) {
   const bus = snapshot.bus!;
   const selecting = ["select-seat", "seated"].includes(bus.phase);
-  const attached = ["boarding", "select-seat", "seated", "closing", "travelling", "dwelling", "arrived"].includes(bus.phase);
+  const attached = bus.attached;
   return <section className="bus-journey" aria-label="Bus journey">
     <div className="eyebrow">{bus.mode === "fast" ? "FAST JOURNEY" : "BUS JOURNEY"} · SIMULATED SERVICE</div>
     <h3>{bus.to}</h3>
@@ -539,7 +540,7 @@ function BusJourneyHUD({ snapshot, action, walk, map }: { snapshot: Snapshot; ac
     <div className="journey-progress"><i style={{ width: `${bus.progress * 100}%` }} /></div>
     <div className="bus-stats"><span>{formatDistance(bus.remaining)} remaining</span><span>{Math.round(bus.speed)} km/h</span><span>~{Math.ceil(bus.remaining / 650)} min</span></div>
     <p className="bus-phase" role="status">{bus.phase.replaceAll("-", " ")} · Doors {bus.door > 0.98 ? "open" : bus.door < 0.02 ? "closed" : "moving"} · {bus.passengers} passengers</p>
-    {!attached ? <div className="bus-buttons"><button onClick={walk}>Walk to passenger door</button><button disabled={!bus.canBoard} onClick={() => action("interact")}>Board bus</button></div> : null}
+    {!attached ? <div className="bus-buttons"><button onClick={walk}>Walk to passenger door</button><button disabled={!bus.canBoard} onClick={() => action("boardBus")}>Board bus</button></div> : null}
     {bus.phase === "boarding" ? <p>Entering through the passenger door…</p> : null}
     {selecting ? <div className="seat-picker" role="dialog" aria-label="Choose a passenger seat" aria-modal="true">
       <p>Choose a passenger seat · front ↑</p>

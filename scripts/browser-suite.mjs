@@ -5,8 +5,8 @@ import { runInThisContext } from "node:vm";
 import { resolve } from "node:path";
 import net from "node:net";
 
-const checks = (process.env.BROWSER_CHECKS ?? "controls,mouse-driving,gamepad,districts,transport,settings,character-movement,movement-edges,performance,final-review,phase8,bus-stop,rail,bus-full,bus-interdistrict,phase9,acceptance,loading-recovery").split(",");
-const output = resolve(process.env.BROWSER_OUTPUT ?? "output/playwright/phase9");
+const checks = (process.env.BROWSER_CHECKS ?? "controls,mouse-driving,gamepad,districts,transport,settings,character-movement,movement-edges,performance,final-review,phase8,bus-stop,rail,bus-full,bus-interdistrict,phase9,acceptance,loading-recovery,phase10,phase10-female").split(",");
+const output = resolve(process.env.BROWSER_OUTPUT ?? "output/playwright/phase10");
 await mkdir(output, { recursive: true });
 const port = await new Promise((ok,fail) => { const server=net.createServer();server.once("error",fail);server.listen(0,"127.0.0.1",()=>{const port=server.address().port;server.close(()=>ok(port));}); });
 const server=spawn(process.execPath,["node_modules/vite/bin/vite.js","--host","127.0.0.1","--port",String(port),"--strictPort"],{stdio:["ignore","pipe","pipe"],windowsHide:true});

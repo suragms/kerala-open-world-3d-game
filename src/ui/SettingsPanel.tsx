@@ -181,6 +181,9 @@ export function SettingsPanel({
                   ))}
                 </select>
               </Setting>
+              <Setting label="Adaptive resolution" detail="Reduce rendering resolution during sustained slow frames; restores detail when performance recovers.">
+                <input type="checkbox" aria-label="Adaptive resolution" checked={settings.adaptiveResolution!==false} onChange={e=>update("adaptiveResolution",e.target.checked)} />
+              </Setting>
               <Setting label="Weather">
                 <select
                   aria-label="Weather"

@@ -4,7 +4,7 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 import { chromium } from "playwright";
 
-const base="/kerala-open-world/",dist=resolve("dist-subdirectory"),output=resolve("output/playwright/phase9-production");
+const base="/kerala-open-world/",dist=resolve("dist-subdirectory"),output=resolve("output/playwright/phase10-production");
 await mkdir(output,{recursive:true});
 const build=spawn(process.execPath,["node_modules/vite/bin/vite.js","build","--base",base,"--outDir",dist],{stdio:"inherit",windowsHide:true});
 if(await new Promise(ok=>build.once("exit",ok))!==0)process.exit(1);

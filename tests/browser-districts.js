@@ -28,6 +28,10 @@ async (page) => {
     const diag = await page.evaluate(() => window.__KOW__.diagnostics());
     if (!Number.isFinite(state.position.x) || diag.roads < 1 || diag.blocked)
       throw new Error(`Invalid world in ${region.id}`);
+    if(state.district!==region.id)throw new Error(`Geographic district mismatch in ${region.id}: ${state.district}`);
+    const facilities=await page.evaluate(()=>({terminals:window.__KOW__.controls().terminals.length,rail:window.__KOW__.snapshot().rail,terrainClearance:window.__KOW__.controls().terrainClearance}));
+    if(!Number.isFinite(facilities.terrainClearance)||facilities.terrainClearance<0)throw new Error(`Invalid terrain camera clearance in ${region.id}`);
+    const perf=await page.evaluate(()=>window.__KOW__.perf());
     const canvas=page.locator('.game-canvas canvas');await canvas.focus();
     let moved=false;
     for(const key of ['ArrowRight','ArrowLeft','ArrowDown']){
@@ -50,7 +54,7 @@ async (page) => {
       traffic: state.traffic,
       pedestrians: state.pedestrians,
       position: state.position,
-      moved,
+      moved,facilities,perf,obstacles:diag.obstacles,railAlignments:diag.railways,runways:diag.runways,coordinates:{lat:state.lat,lon:state.lon},
     });
   }
   return { districts: results, errors };

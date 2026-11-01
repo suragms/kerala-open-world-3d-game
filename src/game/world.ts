@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { toLocal } from "../data/geography";
-import type { GeoFeature, Region, Settings, Tile, Vec2 } from "../types";
+import { toLocal, toGeo, districtAt, insideRing } from "../data/geography";
+import type { GeoFeature, Region, Settings, Tile, Vec2, DistrictCollection } from "../types";
 import {
   bake,
   bakeSteps,
@@ -21,6 +21,7 @@ import {
   roof,
   seeded,
   sign,
+  sphere,
 } from "./assets";
 import {
   CollisionWorld,
@@ -30,6 +31,9 @@ import {
 } from "./navigation";
 import type { Road } from "./navigation";
 import { sampleTerrain } from "./terrain";
+import { REGIONAL_PROFILES, regionalPlant } from "./regional";
+import { buildingExterior } from "./buildings";
+import { addRegionalLandmarkDetail, landmarkSolidBounds } from "./landmarks";
 
 export interface LocalFeature {
   source: GeoFeature;
@@ -106,6 +110,7 @@ export class World {
     public tile: Tile,
     public region: Region,
     public settings: Settings,
+    private boundaries?: DistrictCollection,
   ) {
     initTextures();
     const walkRoads: Road[] = [];
@@ -141,6 +146,8 @@ export class World {
           name: tags["name:en"] ?? tags.name ?? kind.replaceAll("_", " "),
           kind,
           oneway: ["yes", "-1"].includes(tags.oneway),
+          derived:tags.derived==="yes",
+          layer:tags.layer??(tags.bridge?"bridge":tags.tunnel?"tunnel":"ground"),
         };
         if (isDriveable(kind)) this.roads.push(road);
         walkRoads.push({ ...road, oneway: false });
@@ -240,13 +247,14 @@ export class World {
       initial;
     this.collisions.walkableAt = (p) =>
       Math.abs(p.x) < tile.radius - 75 && Math.abs(p.z) < tile.radius - 75;
+    const solid=landmarkSolidBounds(region.theme);
     if (region.asset !== "bus-terminal") this.collisions.add(
       [
-        { x: this.landmarkPosition.x - 15, z: this.landmarkPosition.z - 14 },
-        { x: this.landmarkPosition.x + 15, z: this.landmarkPosition.z - 14 },
-        { x: this.landmarkPosition.x + 15, z: this.landmarkPosition.z + 12 },
-        { x: this.landmarkPosition.x - 15, z: this.landmarkPosition.z + 12 },
-        { x: this.landmarkPosition.x - 15, z: this.landmarkPosition.z - 14 },
+        { x: this.landmarkPosition.x - solid.halfWidth, z: this.landmarkPosition.z + solid.near },
+        { x: this.landmarkPosition.x + solid.halfWidth, z: this.landmarkPosition.z + solid.near },
+        { x: this.landmarkPosition.x + solid.halfWidth, z: this.landmarkPosition.z + solid.far },
+        { x: this.landmarkPosition.x - solid.halfWidth, z: this.landmarkPosition.z + solid.far },
+        { x: this.landmarkPosition.x - solid.halfWidth, z: this.landmarkPosition.z + solid.near },
       ],
       false,
       this.height(this.landmarkPosition.x, this.landmarkPosition.z),
@@ -292,6 +300,7 @@ export class World {
       this.height(this.landmarkPosition.x, this.landmarkPosition.z),
       this.landmarkPosition.z,
     );
+    addRegionalLandmarkDetail(this.landmark,region.theme,region.landmark);
     bake(this.landmark);
     this.root.add(this.landmark);
     this.addLandmarkSurroundings();
@@ -349,19 +358,24 @@ export class World {
     const g = new THREE.Group(),
       p = this.landmarkPosition,
       y = this.height(p.x, p.z);
-    for (let i = 0; i < 14; i++) {
-      const angle = (i / 14) * Math.PI * 2,
+    const plantingCount=this.settings.quality==="low"?8:14,profile=REGIONAL_PROFILES[this.region.id]??REGIONAL_PROFILES.thrissur;
+    for (let i = 0; i < plantingCount; i++) {
+      const angle = (i / plantingCount) * Math.PI * 2,
         range = 42 + (i % 3) * 8;
       const point={x:p.x+Math.cos(angle)*range,z:p.z+Math.sin(angle)*range}, road=this.network.nearest(point);
       if (this.collisions.blocked(point,2) || road && distance(point,road.point)<road.road.width/2+3) continue;
-      palm(
-        g,
-        point.x,
-        this.height(point.x,point.z),
-        point.z,
-        0.95 + (i % 4) * 0.12,
-        i + 12,
-      );
+      const kind=regionalPlant(profile,i/plantingCount),base=this.height(point.x,point.z);
+      if(kind==="tea"){
+        for(let j=0;j<6;j++){const x=point.x+(j%3-1)*1.7,z=point.z+Math.floor(j/3)*2;
+          if(this.collisions.blocked({x,z},1.5))continue;
+          sphere(g,palette.leaf,x,this.height(x,z)+.5,z,1.3,.6,1.5);
+        }
+      }else if(kind==="rubber"){
+        cylinder(g,material("#7a6c56"),point.x,base+2.5,point.z,.18,5);
+        for(const dx of [-1.6,1.6])sphere(g,material("#416943"),point.x+dx,base+5.1,point.z,2.4,1.8,2.6);
+      }else if(kind==="broadleaf")broadleaf(g,point.x,base,point.z,1,i+12);
+      else if(kind==="banana")banana(g,point.x,base,point.z);
+      else palm(g,point.x,base,point.z,.95+(i%4)*.12,i+12);
     }
     for (const side of [-1, 1]) {
       const bench = new THREE.Group();
@@ -562,6 +576,9 @@ export class World {
     const stops: Vec2[] = [];
     const rng = seeded(cx * 72847 + cz * 3143 + 9191);
     const features = this.featureChunks.get(key) ?? [];
+    const regionalId=this.boundaries ? districtAt(toGeo({x:(cx+.5)*SIZE,z:(cz+.5)*SIZE},this.tile.origin),this.boundaries) : this.region.id;
+    const profile=REGIONAL_PROFILES[regionalId??this.region.id]??REGIONAL_PROFILES.thrissur;
+    const plantations=features.filter(f=>f.source.tags.crop||f.source.tags.trees||f.source.tags.produce).map(f=>({tags:f.source.tags,ring:f.points.map(p=>[p.x,p.z])}));
     for (const f of features) {
       const t = f.source.tags;
       yield t.highway ? "roads" : t.building ? "buildings" : t.railway ? "rail" : "other-features";
@@ -585,8 +602,10 @@ export class World {
         if (width >= 7) {
           const a = f.points[0],
             b = f.points[1],
-            length = distance(a, b),
-            dx = (b.x - a.x) / length,
+            length = distance(a, b);
+          // Degenerate imported edges have no tangent for markings or lamp offsets.
+          if(length<.01)continue;
+          const dx = (b.x - a.x) / length,
             dz = (b.z - a.z) / length;
           for (let d = 1; d < length - 1; d += 9) {
             const x = a.x + dx * d,
@@ -632,89 +651,7 @@ export class World {
           box(group, material("#f4dc9a"), x + 1.2, y + 7.4, z, 0.5, 0.05, 0.22);
         }
       } else if (t.building && !(t.amenity === "bus_station" && t.building === "construction") && distance(f.center, this.landmarkPosition) > 32) {
-        const minX = Math.min(...f.points.map((p) => p.x)),
-          maxX = Math.max(...f.points.map((p) => p.x)),
-          minZ = Math.min(...f.points.map((p) => p.z)),
-          maxZ = Math.max(...f.points.map((p) => p.z)),
-          w = maxX - minX,
-          d = maxZ - minZ;
-        if (w > 100 || d > 100 || w < 1 || d < 1) continue;
-        const levels = Math.max(
-            1,
-            Math.min(
-              7,
-              Number(t["building:levels"]) || 1 + Math.floor(rng() * 2),
-            ),
-          ),
-          floorHeight = Number(t.height) || levels * 3.2,
-          elevations=f.points.map(p=>this.height(p.x,p.z)),
-          base = Math.min(...elevations),
-          foundationTop = Math.max(...elevations),
-          h = floorHeight+foundationTop-base;
-        const shape = new THREE.Shape(
-          f.points.map(
-            (p) => new THREE.Vector2(p.x - f.center.x, -p.z + f.center.z),
-          ),
-        );
-        const geo = new THREE.ExtrudeGeometry(shape, {
-          depth: h,
-          bevelEnabled: false,
-        });
-        geo.rotateX(-Math.PI / 2);
-        const walls = ["#d7c8a6", "#b4bfb0", "#c7b394", "#d1cdb9", "#bfb09b"];
-        mesh(
-          group,
-          geo,
-          material(walls[f.source.id % walls.length]),
-          f.center.x,
-          base,
-          f.center.z,
-        );
-        if (w < 30 && d < 35)
-          roof(
-            group,
-            f.center.x,
-            base + h,
-            f.center.z,
-            w + 1,
-            d + 1,
-            Math.min(3, Math.min(w, d) * 0.3),
-          );
-        else
-          box(
-            group,
-            palette.wall,
-            f.center.x,
-            base + h + 0.12,
-            f.center.z,
-            w,
-            0.25,
-            d,
-          );
-        for (let floor = 0; floor < Math.min(4, levels); floor++)
-          for (let x = minX + 1.7; x < maxX - 1; x += 3) {
-            box(
-              group,
-              palette.wood,
-              x,
-              foundationTop + floor * 3.2 + 1.9,
-              maxZ + 0.04,
-              1.05,
-              1.35,
-              0.06,
-            );
-            box(
-              group,
-              material("#53665c", 0.35),
-              x,
-              foundationTop + floor * 3.2 + 1.9,
-              maxZ + 0.08,
-              0.88,
-              1.15,
-              0.04,
-            );
-          }
-        if (rng() > 0.75 && w < 20) banana(group, maxX + 1, base, maxZ + 1);
+        buildingExterior(group,f.source,f.points,f.center,profile,this.settings.quality,(x,z)=>this.height(x,z));
       } else if (["rail", "light_rail", "subway"].includes(t.railway)) {
         const elevated =
             ["subway", "light_rail"].includes(t.railway) &&
@@ -791,9 +728,13 @@ export class World {
       if (nearest && distance(p, nearest.point) < nearest.road.width / 2 + 3)
         continue;
       const y = this.height(p.x, p.z);
-      if (this.region.theme === "tea") {
+      const sourcePlanting=plantations.find(f=>insideRing([p.x,p.z],f.ring));
+      const plantKind=regionalPlant(profile,rng(),sourcePlanting?.tags);
+      if (plantKind === "tea") {
         for (let j = 0; j < 6; j++) {
           const x = p.x + j * 2;
+          const road=this.network.nearest({x,z:p.z});
+          if(this.collisions.blocked({x,z:p.z},1.5)||road&&distance({x,z:p.z},road.point)<road.road.width/2+2)continue;
           const plant = mesh(
             group,
             new THREE.SphereGeometry(1, 6, 4),
@@ -807,7 +748,11 @@ export class World {
           );
           plant.rotation.y = rng();
         }
-      } else if (i % 4 === 0)
+      } else if (plantKind === "banana") banana(group,p.x,y,p.z);
+      else if (plantKind === "rubber") {
+        cylinder(group,material("#7a6c56"),p.x,y+2.5,p.z,.18,5);
+        for(const dx of [-1.6,1.6])mesh(group,new THREE.SphereGeometry(1,7,5),material("#416943"),p.x+dx,y+5.1,p.z,2.4,1.8,2.6);
+      } else if (plantKind === "broadleaf")
         broadleaf(group, p.x, y, p.z, 1 + rng() * 0.4, i + cx * 13);
       else palm(group, p.x, y, p.z, 0.7 + rng() * 0.6, i + cz * 13);
     }
@@ -935,6 +880,10 @@ export class World {
     maxChunkMilliseconds: Math.round(this.maxChunkMilliseconds * 100)/100,
     maxSliceMilliseconds: Math.round(this.maxSliceMilliseconds * 100)/100,
     meanChunkMilliseconds: this.completedCpu.length ? this.completedCpu.reduce((a,b)=>a+b,0)/this.completedCpu.length : 0 }; }
+  loadingProgress() {
+    let loaded=0;for(const key of this.wanted)if(this.chunks.has(key))loaded++;
+    return {loaded,wanted:this.wanted.size,queued:this.queue.length+Number(Boolean(this.building)),progress:this.wanted.size?loaded/this.wanted.size:1};
+  }
   groundHit(ray: THREE.Raycaster) {
     const hit = ray.intersectObject(this.ground)[0];
     return hit ? { x: hit.point.x, z: hit.point.z } : undefined;

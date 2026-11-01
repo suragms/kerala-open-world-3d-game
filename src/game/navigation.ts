@@ -25,12 +25,17 @@ export interface Obstacle {
   maxY: number;
 }
 export interface CollisionBox {
+  source?: "traffic";
   center: Vec2;
   yaw: number;
   halfWidth: number;
   halfLength: number;
   minY?: number;
   maxY?: number;
+}
+export function collisionBoxesOverlap(a:CollisionBox,b:CollisionBox){
+  if(distance(a.center,b.center)>Math.hypot(a.halfWidth,a.halfLength)+Math.hypot(b.halfWidth,b.halfLength))return false;
+  return boxesOverlap(boxCorners(a.center,a.yaw,a.halfWidth,a.halfLength),boxCorners(b.center,b.yaw,b.halfWidth,b.halfLength));
 }
 function boxCorners(
   p: Vec2,
@@ -221,8 +226,10 @@ export class CollisionWorld {
       z: -(q.x - p.x) * s + (q.z - p.z) * c,
     });
     const corners = boxCorners(p, yaw, halfWidth, halfLength);
+    const bodyRadius=Math.hypot(halfWidth,halfLength);
     if (
       this.boxes.some((b) =>
+        distance(p,b.center)<=bodyRadius+Math.hypot(b.halfWidth,b.halfLength) &&
         boxesOverlap(
           corners,
           boxCorners(b.center, b.yaw, b.halfWidth, b.halfLength),
@@ -265,6 +272,7 @@ export class CollisionWorld {
       (b.x - a.x) * (q.z - a.z) - (b.z - a.z) * (q.x - a.x);
     for (const o of found) {
       if (o.water && this.bridgeAt?.(p)) continue;
+      if(p.x+radius<o.minX||p.x-radius>o.maxX||p.z+radius<o.minZ||p.z-radius>o.maxZ)continue;
       if (
         corners.some((q) =>
           insideRing(
@@ -452,6 +460,8 @@ export interface Road {
   name: string;
   kind: string;
   oneway: boolean;
+  derived?:boolean;
+  layer?:string;
 }
 export class RoadNetwork {
   roads: Road[];
@@ -558,6 +568,8 @@ export interface RouteEstimate {
   distanceKm: number | null;
   minutes: number | null;
   reason?: string;
+  path?: LonLat[];
+  access?: [LonLat, LonLat][];
 }
 export const validCoordinate = (p: LonLat) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite)
   && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90;
@@ -602,19 +614,24 @@ export class StateRouter {
     if (!validCoordinate(from) || !validCoordinate(to)) return unavailable("Invalid destination coordinates");
     const a = this.nearest(from), b = this.nearest(to), limit = this.mode === "rail" ? 1000 : 2000;
     if (!a.key || !b.key || a.metres > limit || b.metres > limit) return unavailable(`No imported ${this.mode} connection near these endpoints`);
-    const costs = new Map([[a.key, 0]]), queue = new MinHeap<string>();
+    const costs = new Map([[a.key, 0]]), queue = new MinHeap<string>(), previous = new Map<string,string>();
     queue.push(a.key, 0);
     while (queue.size) {
       const { value: key, priority: cost } = queue.pop()!;
       if (cost !== costs.get(key)) continue;
       if (key === b.key) {
         const km = (cost + a.metres + b.metres) / 1000;
+        const path:LonLat[]=[];
+        let node:string|undefined=key;
+        while(node){path.push(this.graph.get(node)!.lonlat);node=previous.get(node);}
+        path.reverse();
         return { available: true, distanceKm: Math.round(km * 10) / 10,
-          minutes: Math.max(1, Math.round(km / (this.mode === "rail" ? 75 : 45) * 60)) };
+          minutes: Math.max(1, Math.round(km / (this.mode === "rail" ? 75 : 45) * 60)),path,
+          access:[[from,this.graph.get(a.key)!.lonlat],[this.graph.get(b.key)!.lonlat,to]] };
       }
       for (const edge of this.graph.get(key)!.edges) {
         const next = cost + edge.weight;
-        if (next < (costs.get(edge.to) ?? Infinity)) { costs.set(edge.to, next); queue.push(edge.to, next); }
+        if (next < (costs.get(edge.to) ?? Infinity)) { costs.set(edge.to, next); previous.set(edge.to,key);queue.push(edge.to, next); }
       }
     }
     return unavailable(`Imported ${this.mode} network is disconnected between these locations`);

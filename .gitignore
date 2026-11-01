@@ -10,5 +10,6 @@ __pycache__/
 *.pyc
 output/playwright/phase9/
 output/playwright/phase9-*/
+output/playwright/phase10*/
 test-results/
 playwright-report/

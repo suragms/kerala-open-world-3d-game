@@ -118,13 +118,14 @@ export class PassengerJourney {
     this.speed = 0; this.door = 0; this.phase = "opening"; this.resumePhase = "arrived"; this.timer = 0;
     return true;
   }
-  update(dt: number, obstructed = false, redSignal = false) {
+  update(dt: number, obstructed = false, redSignal = false, speedLimit=Infinity) {
     if (dt <= 0 || !Number.isFinite(dt)) return;
     // Bounded integration keeps braking and door transitions stable under accelerated tests.
     let remaining = Math.min(dt, 60);
-    while (remaining > 0) { const step = Math.min(1 / 30, remaining); this.step(step, obstructed, redSignal); remaining -= step; }
+    const limit=Number.isNaN(speedLimit)?0:Math.max(0,speedLimit);
+    while (remaining > 0) { const step = Math.min(1 / 30, remaining); this.step(step, obstructed, redSignal,limit); remaining -= step; }
   }
-  private step(dt: number, obstructed: boolean, redSignal: boolean) {
+  private step(dt: number, obstructed: boolean, redSignal: boolean,speedLimit:number) {
     if (this.attached && this.phase !== "exited") this.seconds += dt;
     this.timer += dt;
     if (["opening", "waiting", "boarding", "select-seat", "seated", "dwelling", "arrived"].includes(this.phase)) this.door = Math.min(1, this.door + dt / 1.1);
@@ -145,7 +146,7 @@ export class PassengerJourney {
     const turn = Math.abs(Math.atan2(Math.sin(b.yaw - a.yaw), Math.cos(b.yaw - a.yaw)));
     const maximum = this.phase === "arriving" ? 4 : this.plan.type === "mini" ? 12 : this.plan.type === "fast" || this.plan.type === "coach" ? 15 : 13;
     const cornerLimit = Math.sqrt(1.35 * 20 * 9.2 / BUS_SPECS[this.plan.type].length / Math.max(0.08, turn));
-    const targetSpeed = obstructed || redSignal ? 0 : Math.min(maximum, cornerLimit, Math.sqrt(2 * 1.6 * remaining));
+    const targetSpeed = obstructed || redSignal ? 0 : Math.min(speedLimit,maximum, cornerLimit, Math.sqrt(2 * 1.6 * remaining));
     this.speed += Math.max(-2.6 * dt, Math.min(1.15 * dt, targetSpeed - this.speed));
     this.travelled = Math.min(this.target.distance, this.travelled + Math.max(0, this.speed) * dt);
     if (remaining < 0.08 && this.speed < 0.7) {

@@ -33,10 +33,13 @@ import { PassengerBusModel, seatPosition } from "./busModels";
 import { BUS_SPECS, busScale } from "./busSpecs";
 import { BusStationManager } from "./terminals";
 import { controller, vibrate } from "./gamepad";
-import { mouseSteering, smoothSteering, vehicleThrottle } from "./vehicle";
+import { mouseSteering, smoothSteering, vehicleThrottle, vehicleAttitude } from "./vehicle";
 import { InteractionManager } from "./interactions";
 import { TRAIN_CAMERAS } from "./rail";
 import { curbsideExit } from "./exits";
+import { AdaptiveResolution } from "./performance";
+import { trafficBody, safeApproachSpeed, relativeTraffic, signalIsRed } from "./trafficLogic";
+import { collisionBoxesOverlap } from "./navigation";
 
 export interface EngineCallbacks {
   snapshot: (snapshot: Snapshot) => void;
@@ -83,6 +86,9 @@ export class GameEngine {
   private pendingInteraction?: { point: Vec2; run: () => void };
   private pendingVehicleExit = false;
   private recoveredCheckpoint = false;
+  private restoredLocality?: {name:string;position:Vec2};
+  private adaptive = new AdaptiveResolution();
+  private cabinEye?: {kind:"bus"|"train";point:THREE.Vector3};
   private lastBusPhase = "";
   interactions = new InteractionManager();
   private hovered = "";
@@ -204,7 +210,7 @@ export class GameEngine {
     skyMat.userData.transient = true;
     this.sky = new THREE.Mesh(new THREE.SphereGeometry(2500, 24, 16), skyMat);
     this.scene.add(this.sky);
-    this.world = new World(this.scene, tile, region, settings);
+    this.world = new World(this.scene, tile, region, settings, boundaries);
     this.signals = this.world.localFeatures.filter(f => f.source.tags.highway === "traffic_signals").map(f => f.center);
     this.terminals = new BusStationManager(this.world, stations);
     this.journeys = save?.journeys ?? [];
@@ -217,6 +223,7 @@ export class GameEngine {
         ? { ...save.position }
         : { ...this.world.spawn };
     this.player = new Human(avatar);
+    if(save?.locality && save.area===tile.id && distance(this.position,save.position)<5)this.restoredLocality={name:save.locality,position:{...this.position}};
     this.scene.add(this.player.root);
     this.playerYaw =
       save?.yaw ??
@@ -236,7 +243,7 @@ export class GameEngine {
       a = road?.road.points[road.index - 1],
       b = road?.road.points[road.index];
     const roadYaw = a && b ? Math.atan2(b.x - a.x, -b.z + a.z) : 0;
-    const reservedRoute = busPlan?.route.points.map(p => toLocal(p, tile.origin));
+    const reservedRoute = (busPlan?.route.drivingPoints??busPlan?.route.points)?.map(p => toLocal(p, tile.origin));
     const reservedLengths = reservedRoute ? routeLengths(reservedRoute) : undefined;
     for (let i = 0; i < 5; i++) {
       const kind: VehicleKind = (
@@ -292,7 +299,7 @@ export class GameEngine {
     }
     this.world.collisions.circles = [];
     this.updateVehicleColliders();
-    this.traffic = new TrafficManager(this.world);
+    this.traffic = new TrafficManager(this.world,reservedRoute);
     if (busPlan) {
       this.bus = new PassengerJourney(busPlan, tile.origin, settings.busDwell);
       this.busModel = new PassengerBusModel(busPlan.type, busPlan.stations[1].name, settings.quality === "low");
@@ -398,6 +405,11 @@ export class GameEngine {
     this.emitSnapshot();
     this.frame = requestAnimationFrame((t) => this.tick(t));
   }
+  private interiorEye(kind:"bus"|"train",target:THREE.Vector3,dt:number) {
+    if(!this.cabinEye || this.cabinEye.kind!==kind)this.cabinEye={kind,point:target.clone()};
+    else this.cabinEye.point.lerp(target,1-Math.exp(-dt*12));
+    return this.cabinEye.point.clone();
+  }
   private resizeCanvas() {
     const w = this.host.clientWidth,
       h = this.host.clientHeight;
@@ -410,7 +422,7 @@ export class GameEngine {
           : this.settings.quality === "medium"
             ? 1.25
             : 1.8,
-      ),
+      ) * this.adaptive.scale,
     );
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
@@ -427,13 +439,14 @@ export class GameEngine {
     if (this.settings.distance !== settings.distance)
       this.cameraDistance = settings.distance;
     this.settings = settings;
+    if(settings.adaptiveResolution===false)this.adaptive.reset();
     if (this.bus) this.bus.dwellSeconds=settings.busDwell;
     this.input.settings = settings;
     this.world.updateSettings(settings);
     if (qualityChanged) {
       const railState=this.trainPassenger&&this.traffic.rail?{distance:this.traffic.rail.distance,speed:this.traffic.rail.speed,direction:this.traffic.rail.direction,dwell:this.traffic.rail.dwell,held:this.traffic.rail.held}:undefined;
       disposeGroup(this.traffic.root);
-      this.traffic = new TrafficManager(this.world);
+      this.traffic = new TrafficManager(this.world,this.bus?.phase!=="exited"?this.bus?.points:undefined);
       if(railState&&this.traffic.rail){Object.assign(this.traffic.rail,railState);this.traffic.update(0,this.elapsed,this.position);}
       if(this.bus&&this.busModel){
         const previous=this.busModel;this.busModel=new PassengerBusModel(this.bus.plan.type,this.bus.plan.stations[1].name,settings.quality==="low");
@@ -490,6 +503,7 @@ export class GameEngine {
               : 0.0011;
     this.scene.fog = new THREE.FogExp2(bottom, density);
     this.rain.visible = ["rainy", "monsoon"].includes(settings.weather);
+    this.rain.geometry.setDrawRange(0,settings.quality==="low" ? settings.weather==="monsoon"?500:300 : settings.weather==="monsoon"?1600:900);
     this.scene.background = new THREE.Color(bottom);
     material("#51534d").roughness = this.rain.visible ? 0.3 : 0.92;
     this.resizeCanvas();
@@ -548,6 +562,7 @@ export class GameEngine {
       if (!this.driving && this.jumpHeight === 0) this.verticalSpeed = 5;
       return;
     }
+    if(action==="boardBus"){this.interact("bus");return;}
     if (action === "interact") {
       if(this.trainPassenger){this.exitTrain();return;}
       this.interact();
@@ -719,6 +734,8 @@ export class GameEngine {
       controller: controller.frame.id,
       inputContext: this.input.context,
       terminals: this.terminals.stations.map(s => ({ id: s.data.id, name: s.data.name, point: s.point, waiting: s.waiting, distance: distance(this.position, s.waiting) })),
+      traffic:this.traffic.agents.map(a=>({kind:a.model.kind,position:{...a.motion.position},speed:a.motion.speed,yaw:a.motion.yaw,phase:a.motion.phase,road:a.road.id,
+        blocked:this.traffic.staticBlocked(a)})),
       steering: this.steering,
       bus: this.bus ? { ...this.bus.snapshot(distance(this.position, this.busDoorPoint()!)), pose: this.bus.pose, doorPoint: this.busDoorPoint(), stops: this.bus.stops, travelled: this.bus.travelled, attached: this.bus.attached } : undefined,
       nearbyObstacles: this.world.collisions.obstacles
@@ -775,6 +792,7 @@ export class GameEngine {
       terminalModels: this.terminals.loaded.size,
       busPassengers: this.busModel?.passengers.length ?? 0,
       streaming: this.world.streamingStats(),
+      resolutionScale: this.adaptive.scale,
       rendererCpuMilliseconds: { ...this.rendererCpu },
       frames: sorted.length, p50FrameMilliseconds: percentile(.5), p95FrameMilliseconds: percentile(.95), p99FrameMilliseconds: percentile(.99),
       onePercentLowFPS: worst.length ? 1000/(worst.reduce((a,b)=>a+b,0)/worst.length) : 0,
@@ -842,7 +860,8 @@ export class GameEngine {
   interact(targetId?: string) {
     if (this.paused) return;
     this.refreshInteractions();
-    const id = targetId ?? (this.input.device === "mouse" ? this.hoveredId : undefined);
+    const readyBus=this.bus?.canBoard(distance(this.position,this.busDoorPoint()!));
+    const id = targetId ?? (readyBus ? "bus" : this.input.device === "mouse" ? this.hoveredId : undefined);
     if (this.interactions.interact(this.position, id)) return;
     const target = id ? this.interactions.targets.find(t => t.id === id && t.available()) : undefined;
     if (target) { this.setDestination(target.point, false); this.pendingInteraction = { point: target.point, run: () => this.interact(id) }; }
@@ -863,7 +882,7 @@ export class GameEngine {
       if (this.bus.board(distance(this.position, this.busDoorPoint()!))) {
         this.cancelWalk(); this.input.clear(); this.input.setContext("BUS_PASSENGER"); this.velocity = { x: 0, z: 0 };
         this.cameraYaw = this.bus.pose.yaw; this.cameraPitch = 0.06; this.orbitUntil = 0;
-        this.safeLocation = { region: this.region.id, area: this.world.tile.id, position: { ...this.position }, coordinate: toGeo(this.position, this.world.tile.origin) };
+        this.safeLocation = { region: this.region.id, area: this.world.tile.id, position: { ...this.position }, coordinate: toGeo(this.position, this.world.tile.origin),name:this.bus.plan.stations[0].name };
         this.callbacks.notice("Boarding through the passenger door. Select an available seat.");
         vibrate(this.settings.gamepadVibration);
       } else this.callbacks.notice("Wait at the passenger door. Boarding is available only when the bus has stopped and the doors are fully open.");
@@ -1041,7 +1060,7 @@ export class GameEngine {
     }
     if (!point) { this.callbacks.notice("The curbside exit is blocked. Continue to the next stop, use Fast Journey, or choose Recover to safe checkpoint."); return; }
     const record = this.bus.record();
-    this.bus.exit(); this.journeys.push(record); this.travelled += record.distance;
+    this.bus.exit();this.traffic.clearReservation(); this.journeys.push(record); this.travelled += record.distance;
     this.updateVehicleColliders();
     this.position = { ...point }; this.playerYaw = pose.yaw; this.player.root.visible = true;
     this.recoveredCheckpoint = recovered;
@@ -1050,7 +1069,7 @@ export class GameEngine {
     this.cameraYaw = this.playerYaw; this.cameraTarget.set(point.x, this.world.height(point.x, point.z) + 1.25, point.z);
     const coordinate = toGeo(point, this.world.tile.origin);
     const district = this.boundaries ? districtAt(coordinate,this.boundaries) ?? this.bus.target.district : this.bus.target.district;
-    this.safeLocation = { region: district, area: this.world.tile.id, position: point, coordinate };
+    this.safeLocation = { region: district, area: this.world.tile.id, position: point, coordinate, name:recovered?"Safe checkpoint":this.bus.target.name };
     if (!this.visited.includes(district)) this.visited.push(district);
     this.callbacks.notice(recovered ? "Recovered to a safe checkpoint. Your bus journey has been recorded." : `${record.completed ? "ARRIVED AT DESTINATION" : "Arrived at stop"} · ${record.to} · ${district} · ${(record.distance / 1000).toFixed(1)} km · ${Math.round(record.seconds / 60)} in-game minutes · ${record.route}`);
     this.callbacks.action("arrivalSave"); this.emitSnapshot(); vibrate(this.settings.gamepadVibration);
@@ -1063,13 +1082,23 @@ export class GameEngine {
       if (bus.fastForward()) { this.world.updateStreaming(bus.pose, true, bus.pose); this.audio.cue("door"); }
     }
     const pose = bus.pose;
-    const forward = { x: Math.sin(pose.yaw), z: -Math.cos(pose.yaw) };
-    const obstruction = this.vehicles.some(v => {
-      const dx = v.position.x - pose.x, dz = v.position.z - pose.z;
-      return dx * forward.x + dz * forward.z > 0 && dx * forward.x + dz * forward.z < 11 && Math.abs(dx * forward.z - dz * forward.x) < 2.4;
-    });
-    const signal = this.signals.some(p => distance(p, pose) < 16 && (p.x - pose.x) * forward.x + (p.z - pose.z) * forward.z > 0 && this.elapsed % 22 < 9);
-    bus.update(dt, obstruction, signal);
+    let limit=Infinity;
+    const halfLength=BUS_SPECS[bus.plan.type].length/2;
+    for(const signal of this.signals){const r=relativeTraffic(pose,pose.yaw,signal);
+      if(r.ahead>0&&r.ahead<100&&Math.abs(r.side)<8&&signalIsRed(this.elapsed,signal))limit=Math.min(limit,safeApproachSpeed(r.ahead-halfLength-2,0,2));}
+    const vehicles=[...this.vehicles.map(v=>({position:v.position,yaw:v.yaw,speed:v.speed,body:trafficBody(v.model.kind)})),
+      ...this.traffic.agents.map(a=>({position:a.motion.position,yaw:a.motion.yaw,speed:a.motion.speed,body:a.motion.body}))];
+    const lookahead=Math.max(18,bus.speed*bus.speed/4+bus.speed*1.2+10),future=[];
+    for(let metres=0;metres<=lookahead;metres+=2)future.push({metres,pose:bus.poseAt(bus.travelled+metres)});
+    for(const vehicle of vehicles){
+      if(distance(pose,vehicle.position)>lookahead+12)continue;
+      const occupied={center:vehicle.position,yaw:vehicle.yaw,...vehicle.body};
+      const conflict=future.find(p=>collisionBoxesOverlap({center:p.pose,yaw:p.pose.yaw,halfWidth:1.45,halfLength:halfLength+.15},occupied));
+      if(conflict){const aligned=Math.cos(vehicle.yaw-conflict.pose.yaw)>.65,gap=Math.max(0,conflict.metres-2);
+        limit=Math.min(limit,safeApproachSpeed(gap,aligned?vehicle.speed:0,2),gap/1.2);
+      }
+    }
+    bus.update(dt, false, false,limit);
     const next = bus.pose;
     this.busModel.root.position.set(next.x, this.world.height(next.x, next.z), next.z);
     this.busModel.root.rotation.y = -next.yaw;
@@ -1086,7 +1115,7 @@ export class GameEngine {
         vibrate(this.settings.gamepadVibration);
         if (bus.attached) {
           const exit = this.safeBusExit();
-          if (exit) this.safeLocation = { region: bus.target.district, area: this.world.tile.id, position: exit, coordinate: toGeo(exit, this.world.tile.origin) };
+          if (exit) this.safeLocation = { region: bus.target.district, area: this.world.tile.id, position: exit, coordinate: toGeo(exit, this.world.tile.origin), name:bus.target.name };
         }
       }
       this.lastBusPhase = bus.phase;
@@ -1153,6 +1182,7 @@ export class GameEngine {
       });
     if (this.bus && this.busModel && !this.bus.attached) this.world.collisions.boxes.push({ center: this.bus.pose,
       yaw: this.bus.pose.yaw, halfWidth: 1.35, halfLength: BUS_SPECS[this.bus.plan.type].length/2+0.1, minY: this.world.height(this.bus.pose.x,this.bus.pose.z), maxY: this.world.height(this.bus.pose.x,this.bus.pose.z)+3.3 });
+    if(this.traffic)this.world.collisions.boxes.push(...this.traffic.bodies);
   }
   private updatePlayer(dt: number) {
     if(this.trainPassenger){this.player.root.visible=false;this.jumpHeight=this.verticalSpeed=0;this.actualSpeed=this.traffic.rail?.speed??0;this.near="Train passenger";return;}
@@ -1185,7 +1215,7 @@ export class GameEngine {
     if (this.driving) {
       const car = this.driving;
       let throttle = forward;
-      const mouseDriving = this.settings.movement === "mouse" && this.input.device !== "gamepad";
+      const mouseDriving = this.settings.movement === "mouse" && this.input.device === "mouse";
       const pad = controller.frame;
       const handbrake = this.handbrake || this.input.keys.has(this.settings.bindings.jump) || pad.handbrake;
       const targetSteering = mouseDriving && this.settings.mouseSteering && !this.input.lookAround
@@ -1252,8 +1282,11 @@ export class GameEngine {
       car.model.animate(car.speed, braking, dt);
       const front = this.world.height(next.x + Math.sin(car.yaw) * halfLength, next.z - Math.cos(car.yaw) * halfLength);
       const back = this.world.height(next.x - Math.sin(car.yaw) * halfLength, next.z + Math.cos(car.yaw) * halfLength);
-      car.model.root.rotation.x = THREE.MathUtils.damp(car.model.root.rotation.x, Math.atan2(front - back, halfLength * 2), 5, dt);
-      if (["Motorcycle", "Scooter"].includes(car.model.kind)) car.model.root.rotation.z = -steering * Math.min(0.25, Math.abs(car.speed) * 0.02);
+      const left=this.world.height(next.x-Math.cos(car.yaw)*halfWidth,next.z-Math.sin(car.yaw)*halfWidth);
+      const rightHeight=this.world.height(next.x+Math.cos(car.yaw)*halfWidth,next.z+Math.sin(car.yaw)*halfWidth);
+      const attitude=vehicleAttitude(car.model.root.rotation.x,car.model.root.rotation.z,Math.atan2(front-back,halfLength*2),Math.atan2(left-rightHeight,halfWidth*2),car.speed,braking,dt);
+      car.model.root.rotation.x=attitude.pitch;
+      car.model.root.rotation.z=attitude.roll + (["Motorcycle", "Scooter"].includes(car.model.kind)?-steering*Math.min(.2,Math.abs(car.speed)*.02):0);
       this.playerYaw = car.yaw;
       if (
         Math.abs(car.speed) > 0.5 &&
@@ -1458,7 +1491,7 @@ export class GameEngine {
     const coach=this.trainPassenger?this.traffic.train?.children[0]:undefined;
     if(coach && this.trainCamera!==2){
       coach.updateWorldMatrix(true,false);
-      const window=this.trainCamera===1,eye=coach.localToWorld(new THREE.Vector3(window?-1.19:-.85,2.5,-2.8));
+      const window=this.trainCamera===1,eye=coach.localToWorld(this.interiorEye("train",new THREE.Vector3(window?-1.19:-.85,2.5,-2.8),dt));
       this.camera.position.copy(eye);
       const relative=this.cameraYaw-(this.traffic.rail?.pose.yaw??0)+(window?-Math.PI/2:0);
       this.camera.lookAt(eye.clone().add(new THREE.Vector3(Math.sin(relative),-Math.sin(this.cameraPitch)*.4,-Math.cos(relative)).transformDirection(coach.matrixWorld)));
@@ -1470,7 +1503,7 @@ export class GameEngine {
       const local = passenger.camera === 1 ? { x: seat.x < 0 ? -1.12 : 1.12, z: seat.z } : passenger.camera === 3 ? { x: -0.25, z: -3.5 } : seat;
       const interior=this.busModel!.chassis.root;
       interior.updateWorldMatrix(true,false);
-      const eye = interior.localToWorld(new THREE.Vector3(local.x,2.48,local.z));
+      const eye = interior.localToWorld(this.interiorEye("bus",new THREE.Vector3(local.x,2.48,local.z),dt));
       this.camera.position.copy(eye);
       const yaw = this.cameraYaw + (passenger.camera === 1 ? (seat.x < 0 ? -Math.PI / 2 : Math.PI / 2) : 0);
       const relative=yaw-pose.yaw;
@@ -1566,7 +1599,9 @@ export class GameEngine {
     if (pad.accelerate || pad.brake || Math.abs(pad.moveX) + Math.abs(pad.moveY) > 0.01) this.input.device = "gamepad";
     this.updateBus(dt);
     this.updatePlayer(dt);
-    this.traffic.update(dt, this.elapsed, this.position);
+    const playerBody=this.bus?.attached ? {center:this.position,yaw:this.bus.pose.yaw,halfWidth:1.35,halfLength:BUS_SPECS[this.bus.plan.type].length/2}
+      : this.driving ? {center:this.position,yaw:this.driving.yaw,...trafficBody(this.driving.model.kind)} : undefined;
+    this.traffic.update(dt, this.elapsed, this.position,playerBody);
     if(this.trainPassenger&&this.traffic.rail){const pose=this.traffic.rail.pose;this.position={x:pose.x,z:pose.z};this.playerYaw=pose.yaw;if(this.elapsed>this.orbitUntil)this.cameraYaw=angleLerp(this.cameraYaw,pose.yaw,1-Math.exp(-dt*2));}
     const lookahead = this.bus?.attached ? this.bus.poseAt(this.bus.travelled + Math.max(100,this.bus.speed*12))
       : this.driving ? { x: this.position.x + Math.sin(this.driving.yaw)*this.driving.speed*8, z: this.position.z - Math.cos(this.driving.yaw)*this.driving.speed*8 }
@@ -1637,6 +1672,7 @@ export class GameEngine {
     this.frameTimes.push(raw);
     if (this.frameTimes.length > 1800) this.frameTimes.shift();
     if (!this.paused) this.simulate(dt);
+    if(!this.paused && this.elapsed>4 && this.adaptive.update(raw*1000,Math.min(raw,.25),this.settings.adaptiveResolution!==false))this.resizeCanvas();
     this.audio.update(
       this.settings,
       this.driving?.speed ?? (this.bus?.attached ? this.bus.speed : 0),
@@ -1738,7 +1774,8 @@ export class GameEngine {
       steering: this.steering,
       reverse: this.reverse,
       handbrake: this.handbrake,
-      locality: this.bus?.phase === "exited" && this.recoveredCheckpoint ? "Safe checkpoint" : this.bus?.phase === "exited" || this.bus?.phase === "arrived" ? this.bus.target.name : this.bus?.attached ? this.world.nearestRoadName(this.position) : this.region.town,
+      locality: this.bus?.phase === "exited" && this.recoveredCheckpoint ? "Safe checkpoint" : this.bus?.phase === "exited" || this.bus?.phase === "arrived" ? this.bus.target.name : this.bus?.attached ? this.world.nearestRoadName(this.position) : station?.data.name ?? (this.restoredLocality && distance(this.position,this.restoredLocality.position)<120 ? this.restoredLocality.name : this.region.town),
+      streaming: this.world.loadingProgress(),
       district: currentDistrict ?? (this.bus?.phase === "exited" || this.bus?.phase === "arrived" ? this.bus.target.district : this.region.id),
       nearStation: station ? { id: station.data.id, name: station.data.name, distance: distance(this.position,station.waiting) } : undefined,
     };
@@ -1755,7 +1792,8 @@ export class GameEngine {
       discovered: [...this.discovered],
       distance: this.travelled,
       savedAt: new Date().toISOString(),
-      safeLocation: this.bus?.attached || this.trainPassenger ? this.safeLocation : { region: this.snapshot().district??this.region.id, area: this.world.tile.id, position: { ...this.position }, coordinate: toGeo(this.position, this.world.tile.origin) },
+      locality: this.snapshot().locality,
+      safeLocation: this.bus?.attached || this.trainPassenger ? this.safeLocation : { region: this.snapshot().district??this.region.id, area: this.world.tile.id, position: { ...this.position }, coordinate: toGeo(this.position, this.world.tile.origin), name:this.snapshot().locality },
       checkpoint: this.trainPassenger?"last-transport-stop":this.bus?.attached ? "last-bus-stop" : "on-foot",
       journeys: [...this.journeys],
       discoveredStations: [...this.discoveredStations],
@@ -1797,10 +1835,5 @@ function angleLerp(a: number, b: number, t: number) {
 }
 
 function vehicleDimensions(kind: VehicleKind) {
-  if (kind === "Scooter" || kind === "Motorcycle")
-    return { halfWidth: 0.48, halfLength: 1.18, height: 1.6 };
-  if (kind === "Auto rickshaw")
-    return { halfWidth: 0.8, halfLength: 1.35, height: 2.2 };
-  if (kind === "Bus") return { halfWidth: 1.4, halfLength: 4.7, height: 3.2 };
-  return { halfWidth: 1.13, halfLength: 2.25, height: 2.1 };
+  return trafficBody(kind);
 }

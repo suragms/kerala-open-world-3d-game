@@ -1,5 +1,11 @@
 async (page) => {
   const samples=[];
+  // Compare fixed rendering resolution; adaptive resolution has separate unit/UI coverage.
+  await page.getByRole('button',{name:'Open settings',exact:true}).click();
+  await page.getByRole('button',{name:'World & display',exact:true}).click();
+  const adaptive=page.getByRole('checkbox',{name:'Adaptive resolution',exact:true});
+  if(await adaptive.count())await adaptive.uncheck();
+  await page.getByRole('button',{name:'Done',exact:false}).click();
   const scene=async(name)=>{
     await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
     await page.getByRole('button',{name:`Select ${name}`,exact:true}).click();await page.getByRole('button',{name:'Explore this location',exact:true}).click();
@@ -33,7 +39,16 @@ async (page) => {
   for(let i=0;i<30&&!(await page.evaluate(()=>window.__KOW__.snapshot().nearStation));i++)await page.evaluate(()=>window.__KOW__.advanceJourney(2));
   await page.getByRole('button',{name:'Travel by bus, rail or air',exact:true}).click();await page.locator('.bus-service').filter({hasText:'Guruvayur KSRTC'}).getByRole('button',{name:'Wait for this bus',exact:true}).click();await page.waitForFunction(()=>!!window.__KOW__?.journey());await page.getByRole('button',{name:'Walk to passenger door',exact:true}).click();
   for(let i=0;i<30&&!(await page.evaluate(()=>window.__KOW__.snapshot().bus.canBoard));i++)await page.evaluate(()=>window.__KOW__.advanceJourney(2));
-  await page.getByRole('button',{name:'Board bus',exact:true}).click();await page.getByRole('button',{name:'Seat 1 available',exact:true}).click();await page.getByRole('button',{name:'Begin full journey',exact:true}).click();await page.waitForFunction(()=>window.__KOW__.snapshot().bus.phase==='travelling');
+  await page.getByRole('button',{name:'Board bus',exact:true}).click();
+  // Older versions can resolve the generic boarding button to a nearby NPC. Use the
+  // real canvas object interaction as an explicit target, without changing the simulation.
+  if(!(await page.evaluate(()=>window.__KOW__.snapshot().bus.attached))){
+    const aim=await page.evaluate(()=>{const s=window.__KOW__.snapshot(),c=window.__KOW__.controls();return {pose:c.bus.pose,yaw:c.cameraYaw,position:s.position};});
+    const desired=Math.atan2(aim.pose.x-aim.position.x,aim.position.z-aim.pose.z),delta=Math.atan2(Math.sin(desired-aim.yaw),Math.cos(desired-aim.yaw));
+    await page.mouse.move(720,400);await page.mouse.down({button:'right'});await page.mouse.move(720-delta/.004,400,{steps:12});await page.mouse.up({button:'right'});await page.waitForTimeout(400);
+    const screen=await page.evaluate(p=>window.__KOW__.projectGround(p),aim.pose);await page.mouse.click(screen.x,screen.y);
+  }
+  await page.getByRole('button',{name:'Seat 1 available',exact:true}).click();await page.getByRole('button',{name:'Begin full journey',exact:true}).click();await page.waitForFunction(()=>window.__KOW__.snapshot().bus.phase==='travelling');
   await measure('active-bus',60);
-  return {method:'Actual requestAnimationFrame intervals during 30-second moving scenes and a 60-second live bus journey. No deterministic clock used during timed measurement; no hardware performance guarantee.',samples};
+  return {method:'Actual requestAnimationFrame intervals during 30-second moving scenes and a 60-second live bus journey, fixed resolution with adaptive resolution disabled when available. No deterministic clock used during timed measurement; no hardware performance guarantee.',samples};
 }

@@ -12,7 +12,12 @@ async(page)=>{
   for(let i=0;i<30&&!(await state()).bus.canBoard;i++)await page.evaluate(()=>window.__KOW__.advanceJourney(2));
   await page.getByRole('button',{name:'Board bus',exact:true}).click();await page.getByRole('button',{name:'Seat 1 available',exact:true}).click();await page.getByRole('button',{name:'Begin full journey',exact:true}).click();
   await page.getByRole('button',{name:'Get off at next stop',exact:true}).click();
-  for(let i=0;i<2000&&!(await state()).bus.canExit;i++)await advance(2);
+  let last=-1,stationary=0;
+  for(let i=0;i<2000&&!(await state()).bus.canExit;i++){
+    const step=await advance(2),progress=step.snapshot.bus.progress;
+    stationary=Math.abs(progress-last)<.000001?stationary+1:0;last=progress;
+    if(stationary>30)throw new Error('Requested-stop journey stalled: '+JSON.stringify(await page.evaluate(()=>window.__KOW__.controls())));
+  }
   const stopped=await state();if(stopped.bus.phase!=='dwelling'||!stopped.bus.acknowledgedStop || stopped.bus.requestStop||stopped.bus.speed!==0)throw new Error('Intermediate stop request was not honored');
   await page.screenshot({path:'output/playwright/phase8-suite/phase9-request-acknowledged.png'});
   await page.getByRole('button',{name:'Save game',exact:true}).click();const checkpoint=await page.evaluate(()=>JSON.parse(localStorage.getItem('kow.save.v2')));

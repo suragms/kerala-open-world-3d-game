@@ -13,6 +13,8 @@ export class InputManager {
   context: InputContext = "ON_FOOT";
   neutral = 0;
   private previousClick = -Infinity;
+  private previousClickPoint = { x: -10000, y: -10000 };
+  private suppressLeft = false;
   private pointer?: number;
   private heldSince = 0;
   private callbacks: { release?: (interrupted: boolean) => void };
@@ -71,25 +73,31 @@ export class InputManager {
       this.mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
       callbacks.track?.(e.clientX, e.clientY);
       if (e.button === 0) {
+        this.suppressLeft = false;
         this.leftHeld = true;
         this.heldSince = performance.now();
         if (!this.driving && this.settings.movement === "mouse") {
-          if (performance.now() - this.previousClick < 320) callbacks.action("sprintDestination");
+          const doubleClick = performance.now() - this.previousClick < 320 && Math.hypot(e.clientX-this.previousClickPoint.x,e.clientY-this.previousClickPoint.y)<12;
           this.previousClick = performance.now();
+          this.previousClickPoint = { x: e.clientX, y: e.clientY };
           callbacks.click(e.clientX, e.clientY);
+          if (doubleClick) callbacks.action("sprintDestination");
         }
       }
       if (e.button === 2) {
         this.rightHeld = true;
-        if (!this.driving && this.leftHeld) { callbacks.release?.(true); this.leftHeld = false; }
+        if (!this.driving && this.leftHeld) { this.suppressLeft=true;callbacks.release?.(true); this.leftHeld = false; }
       }
       this.pointer = e.pointerId;
       try { canvas.setPointerCapture(e.pointerId); } catch { this.clear(); }
     };
     const move = (e: PointerEvent) => {
+      if (e.target !== canvas && this.pointer !== e.pointerId && this.mouseDriveDirection === 0) return;
       if (this.pointer === e.pointerId && typeof e.buttons === "number") {
+        if (!this.driving && e.buttons & 2 && this.leftHeld) { this.suppressLeft=true;callbacks.release?.(true); }
+        if (!(e.buttons & 1)) this.suppressLeft=false;
         if (this.leftHeld && !(e.buttons & 1)) callbacks.release?.(performance.now() - this.heldSince >= 250);
-        this.leftHeld = Boolean(e.buttons & 1); this.rightHeld = Boolean(e.buttons & 2);
+        this.leftHeld = Boolean(e.buttons & 1) && !this.suppressLeft; this.rightHeld = Boolean(e.buttons & 2);
       }
       const rect = canvas.getBoundingClientRect();
       if (active()) this.device = "mouse";
@@ -130,6 +138,9 @@ export class InputManager {
     };
     canvas.addEventListener("pointerdown", down);
     canvas.addEventListener("pointermove", move);
+    // Pedal buttons own pointer capture; their moves still reach the shared steering layer.
+    const externalMove = (e: PointerEvent) => { if (e.target !== canvas) move(e); };
+    window.addEventListener("pointermove", externalMove);
     window.addEventListener("pointerup", up);
     canvas.addEventListener("pointercancel", cancel);
     canvas.addEventListener("lostpointercapture", release);
@@ -141,6 +152,7 @@ export class InputManager {
     this.cleanups.push(() => {
       canvas.removeEventListener("pointerdown", down);
       canvas.removeEventListener("pointermove", move);
+      window.removeEventListener("pointermove", externalMove);
       window.removeEventListener("pointerup", up);
       canvas.removeEventListener("pointercancel", cancel);
       canvas.removeEventListener("lostpointercapture", release);
@@ -168,6 +180,7 @@ export class InputManager {
           this.keys.has(alternateNegative),
       )
     );
+    if (keyboard) this.device = "keyboard";
     return keyboard || analog;
   }
   setContext(context: InputContext) {
@@ -187,6 +200,7 @@ export class InputManager {
     this.mouseDriveDirection = 0;
     this.lookAround = false;
     this.previousClick = -Infinity;
+    this.suppressLeft = false;
     this.releasePointer();
   }
   private releasePointer() {

@@ -58,10 +58,12 @@ export class BusStationManager {
         const target = door && distance(door, p.from) < 18 ? door : p.to;
         const t = phase<5?phase/5:phase<9?1:phase<14?1-(phase-9)/5:0;
         const desired = { x: p.from.x + (target.x - p.from.x) * t, z: p.from.z + (target.z - p.from.z) * t };
-        const next = this.world.collisions.move(p.human.root.position, desired, 0.45);
+        const before=p.human.root.position,delta=distance(before,desired),step=Math.min(delta,Math.max(0,dt)*1.1);
+        const bounded=delta?{x:before.x+(desired.x-before.x)*step/delta,z:before.z+(desired.z-before.z)*step/delta}:desired;
+        const next = this.world.collisions.move(before, bounded, 0.45),moved=distance(before,next);
         p.human.root.position.set(next.x, this.world.height(next.x, next.z), next.z);
         p.human.root.rotation.y = Math.atan2(target.x - p.from.x, target.z - p.from.z);
-        p.human.animate(elapsed, walking ? 0.8 : 0, 0, 0);
+        p.human.animate(elapsed, walking && dt>0 ? moved/dt : 0, 0, 0);
         if(p.phase===0 && phase>=14 && !door){
           p.human.leftLeg.rotation.x=p.human.rightLeg.rotation.x=-1.3;
           p.human.leftKnee.rotation.x=p.human.rightKnee.rotation.x=1.3;

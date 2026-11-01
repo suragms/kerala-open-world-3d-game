@@ -42,6 +42,31 @@ test("Mouse release preserves a click destination but interrupts held following 
   s.input.setContext("TRAIN_PASSENGER");s.target.dispatchEvent(event("keydown",{code:"KeyW",repeat:false}));assert.equal(s.input.axis("backward","forward","KeyS","KeyW"),0);
   s.input.dispose();s.target.dispatchEvent(event("keydown",{code:"KeyW",repeat:false}));assert.equal(s.input.keys.size,0);
 });
+test("Captured HUD pedals still allow pointer movement to steer",()=>{
+  const s=setup();s.input.driving=true;s.input.setContext("IN_VEHICLE");s.input.setMouseDriveDirection(-1);
+  s.target.dispatchEvent(event("pointermove",{clientX:900,clientY:400,pointerId:2,buttons:1,movementX:100,movementY:0}));
+  assert.ok(s.input.mouseX>.7);s.input.dispose();
+});
+test("Distant rapid ground clicks are not treated as a double-click run",()=>{
+  const s=setup();
+  s.canvas.dispatchEvent(event("pointerdown",{clientX:100,clientY:400,button:0,pointerId:1}));s.target.dispatchEvent(event("pointerup",{button:0,pointerId:1}));
+  s.canvas.dispatchEvent(event("pointerdown",{clientX:900,clientY:400,button:0,pointerId:1}));
+  assert.equal(s.actions.includes("sprintDestination"),false);
+  s.target.dispatchEvent(event("pointerup",{button:0,pointerId:1}));s.canvas.dispatchEvent(event("pointerdown",{clientX:904,clientY:402,button:0,pointerId:1}));
+  assert.equal(s.actions.includes("sprintDestination"),true);s.input.dispose();
+});
+test("A chorded right drag cancels held cursor-following without resuming it on movement",()=>{
+  const s=setup();s.canvas.dispatchEvent(event("pointerdown",{clientX:500,clientY:400,button:0,pointerId:1}));
+  s.canvas.dispatchEvent(event("pointermove",{clientX:520,clientY:400,pointerId:1,buttons:3,movementX:20,movementY:0}));
+  assert.equal(s.input.leftHeld,false);assert.equal(s.input.rightHeld,true);
+  s.canvas.dispatchEvent(event("pointermove",{clientX:530,clientY:400,pointerId:1,buttons:1,movementX:10,movementY:0}));assert.equal(s.input.leftHeld,false);s.input.dispose();
+});
+test("Explicit right-button down while left is held suppresses subsequent chorded movement",()=>{
+  const s=setup();s.canvas.dispatchEvent(event("pointerdown",{clientX:500,clientY:400,button:0,pointerId:1}));
+  s.canvas.dispatchEvent(event("pointerdown",{clientX:500,clientY:400,button:2,pointerId:1}));
+  s.canvas.dispatchEvent(event("pointermove",{clientX:550,clientY:400,pointerId:1,buttons:3,movementX:50,movementY:0}));
+  assert.equal(s.input.leftHeld,false);assert.equal(s.input.rightHeld,true);assert.equal(s.releases.at(-1),true);s.input.dispose();
+});
 test("Driving brake does not orbit the camera; dedicated look-around does", () => {
   const s=setup(); s.input.driving=true; s.input.setContext("IN_VEHICLE");
   s.canvas.dispatchEvent(event("pointerdown",{clientX:500,clientY:400,button:2,pointerId:1}));

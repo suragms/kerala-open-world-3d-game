@@ -33,6 +33,7 @@ export function WorldMapPanel({
   onNavigate?: (place: Place) => void;
 }) {
   const [query, setQuery] = useState(""),
+    [routeMode,setRouteMode]=useState<"auto"|"road"|"rail"|"air">("auto"),
     [category, setCategory] = useState("all"),
     [selectedRegion, setSelectedRegion] = useState(
       currentRegion ?? geography.regions.find((r) => r.id === "thrissur")!,
@@ -79,20 +80,21 @@ export function WorldMapPanel({
   const dist = snapshot
     ? haversine([snapshot.lon, snapshot.lat], [selected.lon, selected.lat])
     : 0;
-  const journeyMode =
+  const journeyMode = routeMode!=="auto" ? routeMode :
     selected.kind === "airport"
       ? "air"
       : selected.kind === "station"
         ? "rail"
         : "road";
-  const journey = snapshot
+  const fromLon=snapshot?.lon,fromLat=snapshot?.lat;
+  const journey = useMemo(()=> fromLon!==undefined && fromLat!==undefined
     ? estimateJourney(
-        [snapshot.lon, snapshot.lat],
+        [fromLon, fromLat],
         [selected.lon, selected.lat],
         journeyMode,
         geography.network,
       )
-    : null;
+    : null,[fromLon,fromLat,selected.lon,selected.lat,journeyMode,geography.network]);
   return (
     <div
       className="map-overlay"
@@ -192,6 +194,9 @@ export function WorldMapPanel({
         <div className="map-selection">
           <span className="eyebrow">NEXT STOP</span>
           <h3>{selected.name}</h3>
+          <label>Route by <select aria-label="Route transport mode" value={routeMode} onChange={e=>setRouteMode(e.target.value as typeof routeMode)}>
+            <option value="auto">Suggested mode</option><option value="road">Road</option><option value="rail">Rail</option><option value="air">Air transfer</option>
+          </select></label>
           <p>
             {district.name}{" "}
             {journey ? `· ${journey.label}` : dist ? `· ${formatDistance(dist)} straight-line` : ""}
@@ -235,8 +240,7 @@ export function WorldMapPanel({
             </p>
           ) : (
             <p className="fine-note">
-              Local roads use OpenStreetMap. Long journeys use instant district
-              travel.
+              Gold follows imported route geometry. Dashed access links are approximate. Explore changes scenes; Full Journey is available at supported bus stations.
             </p>
           )}
         </div>
@@ -256,7 +260,9 @@ export function WorldMapPanel({
         </div>
         <DistrictMap
           network={geography.network}
-          destination={place ?? undefined}
+          route={journey?.path}
+          access={journey?.access}
+          destination={selected}
           places={geography.places}
           boundaries={geography.boundaries}
           regions={geography.regions}

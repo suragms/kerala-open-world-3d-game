@@ -170,6 +170,7 @@ export interface Settings {
   gamepadButtons: Record<string, number>;
   gamepadAxes: number[];
   busDwell: number;
+  adaptiveResolution?: boolean;
 }
 export interface SaveData {
   version: 1 | 2;
@@ -182,7 +183,8 @@ export interface SaveData {
   discovered: string[];
   distance: number;
   savedAt: string;
-  safeLocation?: { region: string; area: string; position: Vec2; coordinate?: LonLat };
+  locality?: string;
+  safeLocation?: { region: string; area: string; position: Vec2; coordinate?: LonLat; name?: string };
   journeys?: JourneyRecord[];
   discoveredStations?: string[];
   controls?: Settings;
@@ -225,6 +227,7 @@ export interface Snapshot {
   locality?: string;
   district?: string;
   nearStation?: { id: string; name: string; distance: number };
+  streaming?: { loaded:number; wanted:number; queued:number; progress:number };
   rail?: { attached: boolean; speed: number; stopped: boolean; canBoard: boolean; canExit: boolean; nextStop: string; camera: string; hasStation: boolean };
 }
 export const DEFAULT_AVATAR: AvatarStyle = {
@@ -249,6 +252,7 @@ export const DEFAULT_SETTINGS: Settings = {
   gamepadButtons: { jump: 0, back: 1, interact: 2, camera: 3, map: 8, pause: 9, run: 10, transport: 4, brake: 6, accelerate: 7, up: 12, down: 13, left: 14, right: 15 },
   gamepadAxes: [0, 1, 2, 3],
   busDwell: 8,
+  adaptiveResolution: true,
   invert: false,
   quality: "medium",
   weather: "sunny",

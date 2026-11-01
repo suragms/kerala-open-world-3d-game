@@ -1741,6 +1741,18 @@ kbd {
   width: 2px;
   background: #c3d3b5;
 }
+.scenery-progress {
+  position: absolute;
+  right: 30px;
+  bottom: 40px;
+  padding: 8px 12px;
+  color: #edf0dc;
+  background: #183d33e8;
+  border-radius: 8px;
+  font-size: 11px;
+  pointer-events: none;
+}
+.scenery-progress progress { display: block; width: 145px; height: 4px; margin-top: 5px; accent-color: #d8cb99; }
 .game-attribution {
   position: absolute;
   bottom: 17px;

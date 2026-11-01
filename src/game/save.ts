@@ -25,7 +25,7 @@ export function sanitizeSettings(value: unknown): Settings {
   const result: Settings = { ...DEFAULT_SETTINGS, bindings: { ...DEFAULT_SETTINGS.bindings }, gamepadButtons: { ...DEFAULT_SETTINGS.gamepadButtons }, gamepadAxes: [...DEFAULT_SETTINGS.gamepadAxes] };
   const enums = { movement: ["arrows", "mouse", "wasd"], quality: ["low", "medium", "high", "ultra"], weather: ["sunny", "cloudy", "rainy", "monsoon", "foggy"], time: ["morning", "afternoon", "evening", "night"], language: ["en", "ml"] };
   for (const [key, values] of Object.entries(enums)) if (values.includes(String(saved[key]))) Object.assign(result, { [key]: saved[key] });
-  for (const key of ["mouseSteering", "invert", "steeringAssist", "gamepadVibration"] as const) if (typeof saved[key] === "boolean") result[key] = saved[key];
+  for (const key of ["mouseSteering", "invert", "steeringAssist", "gamepadVibration", "adaptiveResolution"] as const) if (typeof saved[key] === "boolean") result[key] = saved[key];
   for (const [key, bounds] of Object.entries({ sensitivity: [0.2, 2.5], distance: [3, 22], steeringSensitivity: [0.3, 2.5], steeringDeadzone: [0, 0.4], gamepadDeadzone: [0.05, 0.5], busDwell: [6, 30], master: [0, 1], ambience: [0, 1], engine: [0, 1] })) {
     const n = saved[key]; if (typeof n === "number" && Number.isFinite(n)) Object.assign(result, { [key]: Math.max(bounds[0], Math.min(bounds[1], n)) });
   }
@@ -62,6 +62,8 @@ export function validateSave(value: unknown): SaveData | null {
   const result = { ...saved, version: 2 as const, currentVehicle: undefined,
     journeys: Array.isArray(saved.journeys) ? saved.journeys.filter(j => j && typeof j.route === "string" && Number.isFinite(j.distance) && Number.isFinite(j.seconds)).slice(-100) : [],
     discoveredStations: list(saved.discoveredStations) ? saved.discoveredStations : [] };
+  const safeName = (name:unknown):name is string => typeof name === "string" && name.length>0 && name.length<=200 && !/[\u0000-\u001f]/.test(name);
+  result.locality = safeName(saved.locality) ? saved.locality : undefined;
   if(saved.cameraState && [saved.cameraState.yaw,saved.cameraState.pitch,saved.cameraState.distance].every(Number.isFinite)) result.cameraState={yaw:saved.cameraState.yaw,pitch:Math.max(-.12,Math.min(.95,saved.cameraState.pitch)),distance:Math.max(3,Math.min(22,saved.cameraState.distance))};
   else result.cameraState=undefined;
   const identifier = (v: unknown): v is string => typeof v === "string" && /^[a-z0-9_-]{1,120}$/.test(v);
@@ -70,9 +72,11 @@ export function validateSave(value: unknown): SaveData | null {
   if (saved.safeLocation && identifier(saved.safeLocation.region) && identifier(saved.safeLocation.area) && finitePoint(saved.safeLocation.position)
     && (saved.safeLocation.coordinate === undefined || Array.isArray(saved.safeLocation.coordinate) && saved.safeLocation.coordinate.length === 2 && saved.safeLocation.coordinate.every(Number.isFinite) && Math.abs(saved.safeLocation.coordinate[0]) <= 180 && Math.abs(saved.safeLocation.coordinate[1]) <= 90)) {
     result.safeLocation = { ...saved.safeLocation, position: { ...saved.safeLocation.position } };
+    result.safeLocation.name = safeName(saved.safeLocation.name) ? saved.safeLocation.name : undefined;
   }
   if (["last-bus-stop","last-transport-stop"].includes(saved.checkpoint ?? "") && result.safeLocation) {
     result.position = { ...result.safeLocation.position }; result.region = result.safeLocation.region; result.area = result.safeLocation.area;
+    result.locality = result.safeLocation.name ?? result.locality;
   }
   else if (["last-bus-stop","last-transport-stop"].includes(saved.checkpoint ?? "")) return null;
   result.controls = saved.controls ? sanitizeSettings(saved.controls) : undefined;

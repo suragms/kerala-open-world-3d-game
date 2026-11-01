@@ -293,15 +293,19 @@ export function* bakeSteps(group: THREE.Group): Generator<void> {
     group.add(instanced);
   }
   for (const [mat, list] of byMaterial) {
-    yield;
-    const geometry = mergeGeometries(list, false);
-    list.forEach((g) => { g.dispose(); scratch.delete(g); });
-    if (geometry) {
-      const m = new THREE.Mesh(geometry, mat);
-      m.castShadow = true;
-      m.receiveShadow = true;
-      group.add(m);
+    // Bound temporary allocation and yield between material batches.
+    let batch:THREE.BufferGeometry[]=[],vertices=0;
+    const mergeBatch=()=>{
+      const geometry=mergeGeometries(batch,false);
+      batch.forEach(g=>{g.dispose();scratch.delete(g);});batch=[];vertices=0;
+      if(geometry){const m=new THREE.Mesh(geometry,mat);m.castShadow=true;m.receiveShadow=true;group.add(m);}
+    };
+    for(const geometry of list){
+      const count=geometry.getAttribute("position").count;
+      if(batch.length&&vertices+count>60000){yield;mergeBatch();}
+      batch.push(geometry);vertices+=count;
     }
+    if(batch.length){yield;mergeBatch();}
   }
   const empty: THREE.Object3D[] = [];
   group.traverse((o) => {
@@ -723,7 +727,7 @@ export function landmarkModel(theme: Theme, name: string) {
       box(g, palette.stone, 0, 0.08 + i * 0.06, 14 - i * 0.5, 8, 0.16, 1);
     sign(g, name.toUpperCase(), -20, 2.4, 18, 6, "EXTERIOR HERITAGE VIEW");
   } else if (theme === "fort") {
-    const fort = material("#826b4d");
+    const fort = material(name.toLowerCase().includes("palakkad")?"#747b70":"#956344");
     box(g, fort, 0, 2.2, -12, 46, 4.4, 3);
     for (const x of [-22, 22]) {
       box(g, fort, x, 2.2, 0, 3, 4.4, 28);
@@ -746,7 +750,7 @@ export function landmarkModel(theme: Theme, name: string) {
     for (let x = -21; x < 23; x += 2.5) box(g, fort, x, 4.8, -12, 1.2, 1.1, 3);
     box(g, palette.dark, 0, 1.6, -10.4, 4, 3.2, 0.15);
     box(g, fort, 0, 0.3, 1, 40, 0.6, 23);
-    sign(g, name.toUpperCase(), 0, 2.6, 20, 9, "COASTAL HERITAGE · EXTERIOR");
+    sign(g, name.toUpperCase(), 0, 2.6, 20, 9, name.toLowerCase().includes("palakkad")?"GRANITE HERITAGE · LEVEL C EXTERIOR":"COASTAL HERITAGE · LEVEL C EXTERIOR");
   } else if (theme === "fishing") {
     for (let i = 0; i < 3; i++) {
       const x = i * 18 - 18;
@@ -834,6 +838,9 @@ export type VehicleKind =
   | "Scooter"
   | "Motorcycle"
   | "Auto rickshaw"
+  | "Truck"
+  | "Delivery van"
+  | "Tourist van"
   | "Bus";
 export class VehicleModel {
   root = new THREE.Group();
@@ -867,6 +874,21 @@ export class VehicleModel {
       box(this.root, glass, 0, 1.6, -0.91, 1.25, 0.7, 0.08);
       for (const x of [-0.65, 0.65]) this.wheel(x, 0.36, 0.8, 0.34, 0.2);
       this.wheel(0, 0.36, -0.9, 0.34, 0.2);
+      return;
+    }
+    if(kind==="Truck"||kind==="Delivery van"||kind==="Tourist van"){
+      const truck=kind==="Truck",w=truck?2.35:2.05,length=truck?6.8:5.05;
+      box(this.root,rubber,0,.55,0,w*.9,.25,length);
+      box(this.root,body,0,1.35,-length/2+1,w,1.7,2);
+      box(this.root,glass,0,1.8,-length/2-.015,w*.86,.7,.04);
+      box(this.root,truck?material("#bbb4a0"):body,0,truck?2.1:1.65,truck?.9:.75,w,truck?2.45:2,truck?4.1:3.5);
+      for(const side of [-1,1]){
+        box(this.root,glass,side*(w/2+.015),1.85,-length/2+.85,.04,.65,.9);
+        if(kind==="Tourist van")for(let z=-.4;z<2;z+=.9)box(this.root,glass,side*(w/2+.025),2,z,.04,.8,.75);
+        else for(let z=-.5;z<length/2-.2;z+=.7)box(this.root,chrome,side*(w/2+.02),1.9,z,.035,truck?2.1:1.4,.04);
+        for(const z of [-length*.33,length*.32])this.wheel(side*w*.48,.45,z,truck?.47:.4,.25);
+        box(this.root,material("#f7e9b2"),side*w*.35,.95,-length/2-.04,.3,.2,.04);
+      }
       return;
     }
     const bus = kind === "Bus",
