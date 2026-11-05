@@ -5,7 +5,7 @@ async (page) => {
   await page.getByRole('button',{name:'Open world map',exact:true}).first().click();await page.getByRole('textbox',{name:'Search places',exact:true}).fill(area.name);
   const visibleKind=area.kind==='bus_stop'?'bus station':area.kind.replaceAll('_',' ');
   const result=page.locator('.search-results .place-result').filter({hasText:area.name}).filter({hasText:visibleKind}).first();await result.click();
-  await page.getByRole('button',{name:'Explore this location',exact:true}).click();await page.waitForFunction(id=>window.__KOW__?.diagnostics().area===id,area.tile);await page.waitForTimeout(700);
+  await page.getByRole('button',{name:'Quick travel',exact:true}).click();await page.waitForFunction(id=>window.__KOW__?.diagnostics().area===id,area.tile);await page.waitForTimeout(700);
   const diag=await page.evaluate(()=>window.__KOW__.diagnostics());const state=await page.evaluate(()=>window.__KOW__.snapshot());
   if(diag.blocked)throw new Error(`${area.tile}: arrival is inside a collision volume`);
   if(area.kind==='airport'&&diag.runways===0)throw new Error(`${area.tile}: missing sourced runway geometry`);

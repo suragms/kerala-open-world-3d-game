@@ -34,7 +34,8 @@ import type {
 } from "../types";
 import { GameEngine } from "../game/engine";
 import { distance, nearestOnSegment } from "../game/navigation";
-import { formatDistance } from "../data/geography";
+import { taxiFailure } from "../game/taxi";
+import { formatDistance, toGeo } from "../data/geography";
 import { Minimap } from "./Map";
 export interface GamePayload {
   region: Region;
@@ -189,6 +190,15 @@ export function GameView({
         }),
         perf: () => game.perfDiagnostics(),
         journey: () => game.controlDiagnostics().bus,
+        travelProbe: import.meta.env.DEV ? () => ({
+          taxiFailure,
+          bicycle: game.vehicles.find(v=>v.model.kind==='Bicycle')?.position,
+          taxiCandidates: game.world.network.roads.flatMap(r=>r.points).filter(p=>distance(p,game.position)>35&&distance(p,game.position)<350).slice(0,80),
+        }) : undefined,
+        requestLocalTaxi: import.meta.env.DEV ? (point:{x:number;z:number}) => {
+          const coordinate=toGeo(point,game.world.tile.origin);
+          return game.requestTaxi({id:'verification-local-road',name:'Local road destination',district:game.region.id,lat:coordinate[1],lon:coordinate[0],kind:'landmark',source:'Imported road verification',tile:game.world.tile.id});
+        } : undefined,
         advanceJourney: import.meta.env.DEV ? (seconds: number) => game.advanceVerification(seconds) : undefined,
       };
       return () => {
@@ -287,10 +297,15 @@ export function GameView({
               </button>
             </div>
           </div>
+          {snapshot.selectedDestination&&<div className="destination-console"><div><strong>{snapshot.selectedDestination.name}</strong><small>{formatDistance(snapshot.selectedDestination.remaining)} to destination</small></div><button onClick={()=>onAction('map')}>Change destination</button></div>}
+          {snapshot.taxi&&<section className="travel-console" aria-label="Taxi journey"><small>Passenger taxi · local roads</small><h3>{snapshot.taxi.destination}</h3><p role="status">{snapshot.taxi.phase} · {Math.round(snapshot.taxi.speed)} km/h · {formatDistance(snapshot.taxi.remaining)} remaining</p>
+            {!snapshot.taxi.attached?<><p>Walk to the marked pickup point to board.</p><button disabled={!snapshot.taxi.canBoard} onClick={()=>engine.current?.action('boardTaxi')}>Board taxi</button><button onClick={()=>engine.current?.action('cancelTaxi')}>Cancel taxi</button></>:<><button onClick={()=>engine.current?.action('stopTaxi')}>Stop safely</button><button onClick={()=>engine.current?.action('skipTaxi')}>Skip ride</button><button disabled={!snapshot.taxi.canExit} onClick={()=>engine.current?.action('exitTaxi')}>Exit taxi</button></>}
+          </section>}
           <div className="discovery-card">
             <div className="eyebrow">
               <Compass size={14} /> THE JOURNEY IS THE DESTINATION
             </div>
+            <button onClick={()=>onAction("map")}>Change destination</button>
             <h3>
               {snapshot.discovered.includes(payload.tile.id)
                 ? "A little closer to Kerala."
@@ -427,8 +442,9 @@ export function GameView({
             </div>
           </div>
           <div className="mouse-actions">
-            {!snapshot.driving && !snapshot.bus?.attached && !snapshot.rail?.attached ? (
+            {!snapshot.driving && !snapshot.bus?.attached && !snapshot.rail?.attached && !snapshot.taxi?.attached ? (
               <>
+                <button onClick={()=>engine.current?.action("findBicycle")}>Find bicycle</button>
                 <button
                   onClick={() => engine.current?.action("toggleRun")}
                   aria-label="Toggle run"
@@ -437,7 +453,7 @@ export function GameView({
                   <Footprints size={17} />{" "}
                   {snapshot.runEnabled ? "Run on" : "Run"}
                 </button>
-                {snapshot.destination ? (
+                {settings.movement === "mouse" || snapshot.destination ? (
                   <button
                     onClick={() => engine.current?.action("stop")}
                     aria-label="Stop moving"
@@ -466,7 +482,7 @@ export function GameView({
                   onPointerUp={() => engine.current?.setMouseDriveDirection(0)}
                   onPointerCancel={() => engine.current?.setMouseDriveDirection(0)}
                   onLostPointerCapture={() => engine.current?.setMouseDriveDirection(0)}
-                >Reverse</button>
+                >{snapshot.vehicle === "Bicycle" ? "Brake" : "Reverse"}</button>
               </> : null}
               <button onClick={() => engine.current?.action("handbrake")} aria-pressed={snapshot.handbrake}>Handbrake</button>
               <button onClick={() => engine.current?.action("reverse")} aria-pressed={snapshot.reverse} title="Toggle gear while nearly stopped">{snapshot.reverse ? "Reverse gear" : "Forward gear"}</button>
@@ -476,13 +492,13 @@ export function GameView({
             </> : null}
             <button onClick={() => engine.current?.action("camera")} aria-label="Change camera">{snapshot.cameraMode} · Camera</button>
             <button
-              disabled={snapshot.driving || snapshot.bus?.attached || snapshot.rail?.attached}
+              disabled={snapshot.driving || snapshot.bus?.attached || snapshot.rail?.attached || snapshot.taxi?.attached}
               onClick={() => engine.current?.action("jump")}
               aria-label="Jump"
             >
               <ArrowUp size={17} /> Jump
             </button>
-            {!snapshot.bus?.attached ? <button
+            {!snapshot.bus?.attached && !snapshot.taxi?.attached ? <button
               onClick={() => engine.current?.interact()}
               aria-label="Interact"
             >
@@ -511,6 +527,7 @@ export function GameView({
             {snapshot.fps} FPS <span /> {settings.quality.toUpperCase()}{" "}
             <span /> {snapshot.chunks} CHUNKS
           </div>
+          {snapshot.streaming && snapshot.streaming.progress<1 ? <div className="scenery-progress" role="status">Nearby scenery · {Math.round(snapshot.streaming.progress*100)}%<progress aria-label="Nearby scenery loaded" max={1} value={snapshot.streaming.progress} /></div>:null}
           <a
             className="game-attribution"
             href="https://www.openstreetmap.org/copyright"
@@ -530,7 +547,7 @@ export function GameView({
 function BusJourneyHUD({ snapshot, action, walk, map }: { snapshot: Snapshot; action: (name: string) => void; walk: () => void; map: () => void }) {
   const bus = snapshot.bus!;
   const selecting = ["select-seat", "seated"].includes(bus.phase);
-  const attached = ["boarding", "select-seat", "seated", "closing", "travelling", "dwelling", "arrived"].includes(bus.phase);
+  const attached = bus.attached;
   return <section className="bus-journey" aria-label="Bus journey">
     <div className="eyebrow">{bus.mode === "fast" ? "FAST JOURNEY" : "BUS JOURNEY"} · SIMULATED SERVICE</div>
     <h3>{bus.to}</h3>
@@ -539,7 +556,7 @@ function BusJourneyHUD({ snapshot, action, walk, map }: { snapshot: Snapshot; ac
     <div className="journey-progress"><i style={{ width: `${bus.progress * 100}%` }} /></div>
     <div className="bus-stats"><span>{formatDistance(bus.remaining)} remaining</span><span>{Math.round(bus.speed)} km/h</span><span>~{Math.ceil(bus.remaining / 650)} min</span></div>
     <p className="bus-phase" role="status">{bus.phase.replaceAll("-", " ")} · Doors {bus.door > 0.98 ? "open" : bus.door < 0.02 ? "closed" : "moving"} · {bus.passengers} passengers</p>
-    {!attached ? <div className="bus-buttons"><button onClick={walk}>Walk to passenger door</button><button disabled={!bus.canBoard} onClick={() => action("interact")}>Board bus</button></div> : null}
+    {!attached ? <div className="bus-buttons"><button onClick={walk}>Walk to passenger door</button><button disabled={!bus.canBoard} onClick={() => action("boardBus")}>Board bus</button></div> : null}
     {bus.phase === "boarding" ? <p>Entering through the passenger door…</p> : null}
     {selecting ? <div className="seat-picker" role="dialog" aria-label="Choose a passenger seat" aria-modal="true">
       <p>Choose a passenger seat · front ↑</p>
@@ -551,10 +568,12 @@ function BusJourneyHUD({ snapshot, action, walk, map }: { snapshot: Snapshot; ac
     {attached && !selecting && bus.phase !== "boarding" ? <div className="bus-buttons">
       <button onClick={() => action("lookAround")}>Look around</button>
       <button onClick={() => action("camera")}>Change camera</button>
-      <button aria-pressed={bus.requestStop} disabled={bus.phase === "arrived"} onClick={() => action("requestStop")}>{bus.requestStop ? "Stop requested" : "Get off at next stop"}</button>
+      <button aria-pressed={bus.requestStop} disabled={!["travelling", "closing"].includes(bus.phase)} onClick={() => action(bus.requestStop ? "cancelStopRequest" : "requestStop")}>{bus.requestStop ? "Cancel stop request" : "Get off at next stop"}</button>
+      {bus.acknowledgedStop ? <span role="status">Stop request acknowledged · {bus.acknowledgedStop}. The bus will depart after its station dwell.</span> : null}
       <button disabled={bus.phase === "arrived"} onClick={() => action("fastBus")}>Fast Journey</button>
       <button onClick={map}>View route</button>
       <button disabled={!bus.canExit} onClick={() => action("exitBus")}>Exit at stop</button>
+      <button disabled={!bus.canExit} onClick={() => action("recoverBusExit")}>Recover to safe checkpoint</button>
     </div> : null}
     <small>{bus.camera} · Original bus design · road routing, no real timetable</small>
   </section>;

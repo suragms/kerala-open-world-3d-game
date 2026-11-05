@@ -10,7 +10,7 @@ async (page) => {
     await page.setViewportSize({width:1440,height:900}); await page.reload(); await page.bringToFront();
     await page.getByRole('button',{name:'Continue exploring',exact:false}).click(); await page.waitForFunction(()=>window.__KOW__?.snapshot().chunks>=20);
     if((await page.evaluate(()=>window.__KOW__.diagnostics().region))!=='thrissur') {
-      await page.getByRole('button',{name:'Open world map',exact:true}).first().click();await page.getByRole('button',{name:'Select Thrissur',exact:true}).click();await page.getByRole('button',{name:'Explore this location',exact:true}).click();await page.waitForFunction(()=>window.__KOW__?.diagnostics().region==='thrissur');await page.waitForTimeout(400);
+      await page.getByRole('button',{name:'Open world map',exact:true}).first().click();await page.getByRole('button',{name:'Select Thrissur',exact:true}).click();await page.getByRole('button',{name:'Quick travel',exact:true}).click();await page.waitForFunction(()=>window.__KOW__?.diagnostics().region==='thrissur');await page.waitForTimeout(400);
     }
     await page.getByRole('button',{name:'Arrow keys',exact:true}).click(); await canvas.focus();
     await page.keyboard.down('ArrowUp'); await page.waitForTimeout(400);
@@ -32,7 +32,7 @@ async (page) => {
     await page.getByRole('slider',{name:'Camera sensitivity',exact:true}).fill('1.2');
     await page.getByRole('button',{name:'Close settings',exact:true}).click();
     check('Unrelated settings preserve zoom',Math.abs((await controls()).cameraDistance-distance)<0.001);
-    await page.getByRole('button',{name:'Open world map',exact:true}).first().click(); await page.getByRole('button',{name:'Select Wayanad',exact:true}).click(); await page.getByRole('button',{name:'Explore this location',exact:true}).click();
+    await page.getByRole('button',{name:'Open world map',exact:true}).first().click(); await page.getByRole('button',{name:'Select Wayanad',exact:true}).click(); await page.getByRole('button',{name:'Quick travel',exact:true}).click();
     await page.waitForFunction(()=>window.__KOW__?.diagnostics().region==='wayanad'); await page.waitForTimeout(800);
     check('Female body loads in hill terrain',(await controls()).avatar.gender==='female');
     await page.mouse.move(800,400); await page.mouse.down({button:'right'}); await page.mouse.move(800,50,{steps:16}); await page.mouse.up({button:'right'}); await page.mouse.wheel(0,2500); await page.waitForTimeout(600);

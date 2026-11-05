@@ -7,6 +7,7 @@ import type {
   Tile,
   StateNetwork,
   Place,
+  LonLat,
 } from "../types";
 import { toLocal } from "../data/geography";
 
@@ -19,6 +20,8 @@ export function DistrictMap({
   network,
   destination,
   places,
+  route,
+  access,
 }: {
   boundaries: DistrictCollection;
   regions: Region[];
@@ -28,6 +31,8 @@ export function DistrictMap({
   network?: StateNetwork;
   destination?: { lat: number; lon: number; name: string };
   places?: Place[];
+  route?: LonLat[];
+  access?: [LonLat,LonLat][];
 }) {
   const project = (lon: number, lat: number) => [
     (lon - 74.8) * 158 + 118,
@@ -230,23 +235,8 @@ export function DistrictMap({
             </g>
           );
         })}
-        {/* Route highlight line from player to destination */}
-        {current && destination ? (() => {
-          const [dx, dy] = project(destination.lon, destination.lat);
-          return (
-            <line
-              x1={x}
-              y1={y}
-              x2={dx}
-              y2={dy}
-              stroke="#b89854"
-              strokeWidth="1.4"
-              strokeDasharray="5 4"
-              opacity=".5"
-              pointerEvents="none"
-            />
-          );
-        })() : null}
+        {route?.length ? <polyline data-testid="network-route" points={route.map(p=>project(...p).join(",")).join(" ")} fill="none" stroke="#b89854" strokeWidth="2.4" pointerEvents="none"><title>Imported network route</title></polyline>:null}
+        {access?.map(([a,b],i)=><polyline key={i} points={[a,b].map(p=>project(...p).join(",")).join(" ")} fill="none" stroke="#b89854" strokeWidth="1.4" strokeDasharray="4 3" pointerEvents="none"><title>Approximate endpoint access</title></polyline>)}
         {/* Player position dot with pulse animation */}
         {current ? (
           <g transform={`translate(${x},${y})`} className="player-map-marker">
@@ -390,7 +380,7 @@ export function Minimap({
       <span className="mini-north">N</span>
       <span className="mini-caption">
         <Compass size={13} />
-        <span>{region.town}</span>
+        <span>{snapshot.locality ?? region.town}</span>
         <kbd>M</kbd>
       </span>
     </button>

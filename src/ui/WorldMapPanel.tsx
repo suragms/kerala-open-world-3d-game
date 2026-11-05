@@ -14,6 +14,8 @@ import {
 import type { Geography, Place, Region, Snapshot } from "../types";
 import { formatDistance, haversine, placesInRegion } from "../data/geography";
 import { estimateJourney } from "../game/navigation";
+import { DestinationBrowser } from "./DestinationBrowser";
+import { travelCapabilities } from "../game/travel";
 import { DistrictMap } from "./Map";
 export function WorldMapPanel({
   geography,
@@ -22,7 +24,7 @@ export function WorldMapPanel({
   snapshot,
   onClose,
   onTravel,
-  onNavigate,
+  onNavigate, onTaxi, onReachable,
 }: {
   geography: Geography;
   currentRegion?: Region;
@@ -31,33 +33,12 @@ export function WorldMapPanel({
   onClose: () => void;
   onTravel: (region: Region, place?: Place) => void;
   onNavigate?: (place: Place) => void;
+  onTaxi?: (place: Place) => void;
+  onReachable?: (place: Place) => boolean;
 }) {
-  const [query, setQuery] = useState(""),
-    [category, setCategory] = useState("all"),
-    [selectedRegion, setSelectedRegion] = useState(
-      currentRegion ?? geography.regions.find((r) => r.id === "thrissur")!,
-    ),
-    [place, setPlace] = useState<Place | null>(
-      () => geography.places.find((p) => p.tile === currentArea) ?? null,
-    );
-  const results = useMemo(
-    () =>
-      geography.places
-        .filter(
-          (p) =>
-            (category === "all" || p.kind === category || category === "tourist" && ["attraction", "tourism", "landmark"].includes(p.kind)) &&
-            (!query ||
-              `${p.name} ${p.localName ?? ""} ${p.district} ${p.iata ?? ""}`
-                .toLowerCase()
-                .includes(query.toLowerCase())),
-        )
-        .sort(
-          (a, b) =>
-            Number(b.kind === "landmark") - Number(a.kind === "landmark"),
-        )
-        .slice(0, 35),
-    [geography, query, category],
-  );
+  const [routeMode,setRouteMode]=useState<"auto"|"road"|"rail"|"air">("auto");
+  const [selectedRegion,setSelectedRegion]=useState(currentRegion??geography.regions.find(r=>r.id==='thrissur')!);
+  const [place,setPlace]=useState<Place|null>(()=>geography.places.find(p=>p.tile===currentArea)??null);
   const selected = place ?? {
     name: selectedRegion.landmark,
     district: selectedRegion.id,
@@ -69,30 +50,25 @@ export function WorldMapPanel({
   };
   const district =
     geography.regions.find((r) => r.id === selected.district) ?? selectedRegion;
-  const local =
-    (!("tile" in selected && selected.tile) || selected.tile === currentArea) &&
-    currentRegion?.id === district.id &&
-    haversine([selected.lon, selected.lat], currentRegion.origin) < 1100;
-  const covered =
-    ("tile" in selected && Boolean(selected.tile)) ||
-    haversine([selected.lon, selected.lat], district.origin) < 1100;
+  const caps=travelCapabilities(selected,district,currentRegion&&currentArea?{region:currentRegion,area:currentArea,snapshot,reachable:onReachable?.(selected)}:undefined);
   const dist = snapshot
     ? haversine([snapshot.lon, snapshot.lat], [selected.lon, selected.lat])
     : 0;
-  const journeyMode =
+  const journeyMode = routeMode!=="auto" ? routeMode :
     selected.kind === "airport"
       ? "air"
       : selected.kind === "station"
         ? "rail"
         : "road";
-  const journey = snapshot
+  const fromLon=snapshot?.lon,fromLat=snapshot?.lat;
+  const journey = useMemo(()=> fromLon!==undefined && fromLat!==undefined
     ? estimateJourney(
-        [snapshot.lon, snapshot.lat],
+        [fromLon, fromLat],
         [selected.lon, selected.lat],
         journeyMode,
         geography.network,
       )
-    : null;
+    : null,[fromLon,fromLat,selected.lon,selected.lat,journeyMode,geography.network]);
   return (
     <div
       className="map-overlay"
@@ -114,84 +90,13 @@ export function WorldMapPanel({
             <X size={20} />
           </button>
         </div>
-        <label className="search-field">
-          <Search size={17} />
-          <input
-            aria-label="Search places"
-            placeholder="A town, landmark or a little detour…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          {query ? (
-            <button onClick={() => setQuery("")} aria-label="Clear search">
-              <X size={14} />
-            </button>
-          ) : null}
-        </label>
-        <div className="map-filters">
-          {(
-            [
-              ["all", "All places", MapPin],
-              ["landmark", "Landmarks", TreePalm],
-              ["station", "Rail", TrainFront],
-              ["airport", "Airports", Plane],
-              ["bus_stop", "Bus stops", BusFront],
-              ["bus_station", "Bus stations", BusFront],
-              ["tourist", "Tourist destinations", TreePalm],
-            ] as const
-          ).map(([id, label, Icon]) => (
-            <button
-              key={id}
-              className={category === id ? "active" : ""}
-              onClick={() => setCategory(id)}
-            >
-              <Icon size={13} />
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="search-results" aria-label="Place search results">
-          {results.length ? (
-            results.map((p) => (
-              <button
-                className={`place-result ${place?.id === p.id ? "active" : ""}`}
-                key={p.id}
-                onClick={() => {
-                  setPlace(p);
-                  setSelectedRegion(
-                    geography.regions.find((r) => r.id === p.district)!,
-                  );
-                }}
-              >
-                <span className="place-icon">
-                  {p.kind === "airport" ? (
-                    <Plane size={17} />
-                  ) : p.kind === "station" ? (
-                    <TrainFront size={17} />
-                  ) : (
-                    <MapPin size={17} />
-                  )}
-                </span>
-                <span>
-                  <strong>{p.name}</strong>
-                  <small>
-                    {geography.regions.find((r) => r.id === p.district)?.name} ·{" "}
-                    {p.kind.replaceAll("_", " ")}
-                    {p.kind === "bus_station" ? " · C: procedural architecture" : ""}
-                  </small>
-                </span>
-                <ArrowRight size={14} />
-              </button>
-            ))
-          ) : (
-            <p className="empty-state">
-              No places found. Try a district name or “airport”.
-            </p>
-          )}
-        </div>
+        <DestinationBrowser geography={geography} selectedId={selected.id} onSelect={p=>{setPlace(p);setSelectedRegion(geography.regions.find(r=>r.id===p.district)!);}}/>
         <div className="map-selection">
           <span className="eyebrow">NEXT STOP</span>
           <h3>{selected.name}</h3>
+          <label>Route by <select aria-label="Route transport mode" value={routeMode} onChange={e=>setRouteMode(e.target.value as typeof routeMode)}>
+            <option value="auto">Suggested mode</option><option value="road">Road</option><option value="rail">Rail</option><option value="air">Air transfer</option>
+          </select></label>
           <p>
             {district.name}{" "}
             {journey ? `· ${journey.label}` : dist ? `· ${formatDistance(dist)} straight-line` : ""}
@@ -207,38 +112,13 @@ export function WorldMapPanel({
               <ExternalLink size={12} />
             </a>
           </div>
-          {local && onNavigate ? (
-            <button
-              className="primary wide"
-              onClick={() => {
-                onNavigate(selected);
-                onClose();
-              }}
-            >
-              <Navigation size={16} /> Set destination <ArrowRight size={16} />
-            </button>
-          ) : (
-            <button
-              className="primary wide"
-              onClick={() => onTravel(district, covered ? selected : undefined)}
-            >
-              {covered
-                ? "Explore this location"
-                : `Explore ${district.town} area`}
-              <ArrowRight size={16} />
-            </button>
-          )}
-          {!covered ? (
-            <p className="fine-note">
-              This place is mapped. Its detailed scene is not built yet; travel
-              takes you to the {district.landmark} area.
-            </p>
-          ) : (
-            <p className="fine-note">
-              Local roads use OpenStreetMap. Long journeys use instant district
-              travel.
-            </p>
-          )}
+          <p className="travel-coverage">{caps.covered?'Playable destination':'Map location only'}{caps.reason?` · ${caps.reason}`:''}</p>
+          <div className="travel-options">
+            {onNavigate&&<button disabled={!caps.gps} onClick={()=>{onNavigate(selected);onClose();}}>Set GPS</button>}
+            <button disabled={!caps.quickTravel} onClick={()=>onTravel(district,selected)}>{currentRegion?'Quick travel':'Start here'}</button>
+            {onTaxi&&<button disabled={!caps.taxi} onClick={()=>onTaxi(selected)}>Request taxi</button>}
+          </div>
+          <p className="fine-note">Quick travel changes scenes. Full bus journeys depart from supported bus stands. Gold follows imported route geometry; dashed access links are approximate.</p>
         </div>
       </div>
       <div className="map-canvas">
@@ -256,7 +136,9 @@ export function WorldMapPanel({
         </div>
         <DistrictMap
           network={geography.network}
-          destination={place ?? undefined}
+          route={journey?.path}
+          access={journey?.access}
+          destination={selected}
           places={geography.places}
           boundaries={geography.boundaries}
           regions={geography.regions}

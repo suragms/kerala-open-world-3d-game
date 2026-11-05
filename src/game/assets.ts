@@ -219,28 +219,38 @@ export function roof(
 
 /** Bake static props by material. Mesh bounds remain per geographic chunk. */
 export function bake(group: THREE.Group) {
+  for (const _step of bakeSteps(group)) { /* Startup/static models can finish synchronously. */ }
+  return group;
+}
+export function* bakeSteps(group: THREE.Group): Generator<void> {
   group.updateMatrixWorld(true);
   const byMaterial = new Map<THREE.Material, THREE.BufferGeometry[]>(),
     rootInverse = group.matrixWorld.clone().invert();
   const remove: THREE.Object3D[] = [];
   const fronds = new Map<THREE.Material, THREE.Matrix4[]>();
-  group.traverse((obj) => {
+  const objects: THREE.Object3D[] = [];
+  group.traverse(obj => objects.push(obj));
+  const scratch = new Set<THREE.BufferGeometry>();
+  try {
+  for (const obj of objects) {
+    yield;
     if (
       !(obj instanceof THREE.Mesh) ||
       Array.isArray(obj.material) ||
       obj.userData.keep
     )
-      return;
+      continue;
     if (obj.geometry === frondGeometry) {
       const matrices = fronds.get(obj.material) ?? [];
       matrices.push(rootInverse.clone().multiply(obj.matrixWorld));
       fronds.set(obj.material, matrices);
       remove.push(obj);
-      return;
+      continue;
     }
     const g = obj.geometry.index
       ? obj.geometry.toNonIndexed()
       : obj.geometry.clone();
+    scratch.add(g);
     for (const attribute of Object.keys(g.attributes))
       if (!["position", "normal", "uv"].includes(attribute))
         g.deleteAttribute(attribute);
@@ -258,7 +268,7 @@ export function bake(group: THREE.Group) {
     list.push(g);
     byMaterial.set(obj.material, list);
     remove.push(obj);
-  });
+  }
   for (const obj of remove) {
     obj.removeFromParent();
     if (
@@ -270,6 +280,7 @@ export function bake(group: THREE.Group) {
       obj.geometry.dispose();
   }
   for (const [mat, matrices] of fronds) {
+    yield;
     const instanced = new THREE.InstancedMesh(
       frondGeometry,
       mat,
@@ -282,14 +293,19 @@ export function bake(group: THREE.Group) {
     group.add(instanced);
   }
   for (const [mat, list] of byMaterial) {
-    const geometry = mergeGeometries(list, false);
-    list.forEach((g) => g.dispose());
-    if (geometry) {
-      const m = new THREE.Mesh(geometry, mat);
-      m.castShadow = true;
-      m.receiveShadow = true;
-      group.add(m);
+    // Bound temporary allocation and yield between material batches.
+    let batch:THREE.BufferGeometry[]=[],vertices=0;
+    const mergeBatch=()=>{
+      const geometry=mergeGeometries(batch,false);
+      batch.forEach(g=>{g.dispose();scratch.delete(g);});batch=[];vertices=0;
+      if(geometry){const m=new THREE.Mesh(geometry,mat);m.castShadow=true;m.receiveShadow=true;group.add(m);}
+    };
+    for(const geometry of list){
+      const count=geometry.getAttribute("position").count;
+      if(batch.length&&vertices+count>60000){yield;mergeBatch();}
+      batch.push(geometry);vertices+=count;
     }
+    if(batch.length){yield;mergeBatch();}
   }
   const empty: THREE.Object3D[] = [];
   group.traverse((o) => {
@@ -297,7 +313,7 @@ export function bake(group: THREE.Group) {
       empty.push(o);
   });
   empty.forEach((o) => o.removeFromParent());
-  return group;
+  } finally { scratch.forEach(g => g.dispose()); }
 }
 export function disposeGroup(root: THREE.Object3D) {
   const geometries = new Set<THREE.BufferGeometry>();
@@ -711,7 +727,7 @@ export function landmarkModel(theme: Theme, name: string) {
       box(g, palette.stone, 0, 0.08 + i * 0.06, 14 - i * 0.5, 8, 0.16, 1);
     sign(g, name.toUpperCase(), -20, 2.4, 18, 6, "EXTERIOR HERITAGE VIEW");
   } else if (theme === "fort") {
-    const fort = material("#826b4d");
+    const fort = material(name.toLowerCase().includes("palakkad")?"#747b70":"#956344");
     box(g, fort, 0, 2.2, -12, 46, 4.4, 3);
     for (const x of [-22, 22]) {
       box(g, fort, x, 2.2, 0, 3, 4.4, 28);
@@ -734,7 +750,7 @@ export function landmarkModel(theme: Theme, name: string) {
     for (let x = -21; x < 23; x += 2.5) box(g, fort, x, 4.8, -12, 1.2, 1.1, 3);
     box(g, palette.dark, 0, 1.6, -10.4, 4, 3.2, 0.15);
     box(g, fort, 0, 0.3, 1, 40, 0.6, 23);
-    sign(g, name.toUpperCase(), 0, 2.6, 20, 9, "COASTAL HERITAGE · EXTERIOR");
+    sign(g, name.toUpperCase(), 0, 2.6, 20, 9, name.toLowerCase().includes("palakkad")?"GRANITE HERITAGE · LEVEL C EXTERIOR":"COASTAL HERITAGE · LEVEL C EXTERIOR");
   } else if (theme === "fishing") {
     for (let i = 0; i < 3; i++) {
       const x = i * 18 - 18;
@@ -817,15 +833,21 @@ export function landmarkModel(theme: Theme, name: string) {
 export { Human } from "./character";
 
 export type VehicleKind =
+  | "Bicycle"
+  | "Taxi"
   | "Hatchback"
   | "Jeep"
   | "Scooter"
   | "Motorcycle"
   | "Auto rickshaw"
+  | "Truck"
+  | "Delivery van"
+  | "Tourist van"
   | "Bus";
 export class VehicleModel {
   root = new THREE.Group();
   wheels: THREE.Mesh[] = [];
+  pedals = new THREE.Group();
   brakes: THREE.Mesh[] = [];
   kind: VehicleKind;
   constructor(kind: VehicleKind = "Hatchback", color = "#d8c9a9") {
@@ -834,6 +856,20 @@ export class VehicleModel {
       glass = material("#476065", 0.13, 0.45),
       rubber = material("#252624"),
       chrome = material("#9caaa5", 0.3, 0.65);
+    if(kind==='Bicycle') {
+      const tube=(a:number[],b:number[])=>beam(this.root,body,new THREE.Vector3(...a),new THREE.Vector3(...b),.035);
+      for(const [a,b] of [[[0,.36,.72],[0,.4,0]],[[0,.4,0],[0,1,.2]],[[0,1,.2],[0,.36,.72]],[[0,1,.2],[0,1,-.58]],[[0,1,-.58],[0,.4,0]],[[0,1,-.58],[0,.36,-.75]]] as number[][][])tube(a,b);
+      box(this.root,rubber,0,1.04,.22,.28,.08,.36);
+      box(this.root,chrome,0,1.18,-.56,.65,.05,.06);
+      for(const z of [-.75,.72]){
+        const tire=mesh(this.root,new THREE.TorusGeometry(.34,.035,6,20),rubber,0,.36,z);tire.rotation.y=Math.PI/2;this.wheels.push(tire);
+        for(let a=0;a<Math.PI*2;a+=Math.PI/4)beam(this.root,chrome,new THREE.Vector3(0,.36,z),new THREE.Vector3(0,.36+Math.sin(a)*.31,z+Math.cos(a)*.31),.006);
+      }
+      this.root.add(this.pedals);this.pedals.position.set(0,.4,0);
+      box(this.pedals,chrome,0,0,0,.4,.03,.03);
+      for(const side of [-1,1]){box(this.pedals,chrome,side*.17,side*.13,0,.03,.26,.03);box(this.pedals,rubber,side*.23,side*.26,0,.18,.04,.12);}
+      return;
+    }
     if (kind === "Scooter" || kind === "Motorcycle") {
       box(this.root, body, 0, 0.7, 0, 0.6, 0.45, 1.8);
       box(this.root, rubber, 0, 1.02, 0.2, 0.55, 0.16, 1.15);
@@ -857,6 +893,22 @@ export class VehicleModel {
       this.wheel(0, 0.36, -0.9, 0.34, 0.2);
       return;
     }
+    if(kind==="Truck"||kind==="Delivery van"||kind==="Tourist van"){
+      const truck=kind==="Truck",w=truck?2.35:2.05,length=truck?6.8:5.05;
+      box(this.root,rubber,0,.55,0,w*.9,.25,length);
+      box(this.root,body,0,1.35,-length/2+1,w,1.7,2);
+      box(this.root,glass,0,1.8,-length/2-.015,w*.86,.7,.04);
+      box(this.root,truck?material("#bbb4a0"):body,0,truck?2.1:1.65,truck?.9:.75,w,truck?2.45:2,truck?4.1:3.5);
+      for(const side of [-1,1]){
+        box(this.root,glass,side*(w/2+.015),1.85,-length/2+.85,.04,.65,.9);
+        if(kind==="Tourist van")for(let z=-.4;z<2;z+=.9)box(this.root,glass,side*(w/2+.025),2,z,.04,.8,.75);
+        else for(let z=-.5;z<length/2-.2;z+=.7)box(this.root,chrome,side*(w/2+.02),1.9,z,.035,truck?2.1:1.4,.04);
+        for(const z of [-length*.33,length*.32])this.wheel(side*w*.48,.45,z,truck?.47:.4,.25);
+        box(this.root,material("#f7e9b2"),side*w*.35,.95,-length/2-.04,.3,.2,.04);
+      }
+      return;
+    }
+    if(kind==='Taxi'){box(this.root,material('#ffd447'),0,2.12,.1,.62,.25,.3);box(this.root,rubber,0,2.13,-.056,.42,.09,.012);}
     const bus = kind === "Bus",
       jeep = kind === "Jeep",
       w = bus ? 2.6 : 1.85,
@@ -968,6 +1020,7 @@ export class VehicleModel {
     this.wheels.push(rim);
   }
   animate(speed: number, braking: boolean, dt: number) {
+    if(this.kind==='Bicycle'){for(const wheel of this.wheels)wheel.rotateZ(-speed*dt/.34);this.pedals.rotation.x-=speed*dt*2;return;}
     for (const wheel of this.wheels) wheel.rotateY((-speed * dt) / 0.4);
     for (const brake of this.brakes)
       (brake.material as THREE.MeshStandardMaterial).emissive.set(

@@ -1,0 +1,26 @@
+# Phase 9 confirmed defect inventory
+
+Baseline: `0fada2311bf2c6c6633ee6b47e676707aaf59766`. Branch: `fix/phase9-stability-comprehensive-audit`.
+
+Each entry is supported by the original implementation; test outcomes and final status are recorded in PHASE9_BUG_FIX_REPORT.md.
+
+| ID / severity | File / root cause | Reproduction / actual behavior | Expected behavior / correction | Verification |
+|---|---|---|---|---|
+| P9-01 High | bus.ts: dwell requires `!requestStop`, and the flag never resets | Board, request a stop, remain seated: bus dwells indefinitely | Acknowledge request on arrival; bounded configurable dwell; allow cancellation | Deterministic complete journeys, repeated requests, browser continuation |
+| P9-02 High | engine.ts: exitBus pushes a probe box into live collisions before a fallible search | Block exit and retry: temporary boxes accumulate until the next collider refresh | Exit probes must not mutate persistent geometry; curbside swept exit validation; recovery | Collision regressions and browser bus exit |
+| P9-03 High | navigation.ts: StateRouter merges all feature kinds and falls back to straight distance | Request rail on road-only/disconnected data: apparently valid estimate | Independent mode graphs, exact shared vertices, directional edges, explicit unavailable result | Mode, disconnection, direction, cache and actual-data route tests |
+| P9-04 High | navigation.ts: singleton cachedRouter ignores supplied network | Estimate A, then B: A's graph is reused | Weak identity/version/mode cache; binary heap Dijkstra | Different networks and revisions |
+| P9-05 High | geography.ts and App.tsx: root-relative data URLs | Serve beneath a subdirectory: requests escape deployment base | Resolve data relative to Vite BASE_URL | Production subdirectory browser check |
+| P9-06 High | geography.ts: rejected terrainIndex promise retained | Fail terrain-index once, retry loading: no new index fetch | Bounded retry and rejected-cache eviction; validate datasets | Mock network failure/JSON corruption tests and browser recovery |
+| P9-07 Medium | world.ts: wanted set only recomputes on current chunk change | Stay in one chunk, change lookahead: stale chunks retained, new ones omitted | Refresh when lookahead changes; cancel stale work; bound frame work | Streaming lifecycle regressions and travel profiling |
+| P9-08 Medium | input.ts / engine.ts: held destination survives blur/cancel; pointer capture never released explicitly | Hold walking input, cancel or blur: path continues | Distinguish click destination from held following; clear held walk on interruption and release | Input lifecycle and browser checks |
+| P9-09 High | save.ts: camera accepts incomplete object, invalid safeLocation types; corrupt v2 suppresses valid v1 | Load camera `{}` or malformed transport checkpoint: NaN camera or invalid area | Validate each field, safe checkpoint and geographic identity; recover last valid save | Corruption, migration, both-avatar and transport tests |
+| P9-10 Medium | App.tsx: stale async load catch clears loading/unpauses current game | Start two loads; older request rejects last | Ignore stale success and failure; preserve latest transition | Browser delayed network switching |
+| P9-11 Medium | scripts/browser-*.ps1: unpinned npx downloads, external server prerequisite | Run suite on clean checkout/Linux: platform/server dependency | Pinned runner, managed server/readiness, strict assertions, failure artifacts, CI | Clean install and full browser suite |
+| P9-12 Medium | save.ts / SettingsPanel.tsx: saved duplicate keys accepted; UI conflict silent | Import duplicate movement/action bindings or remap onto WASD aliases | Conflict-aware validation and visible warning; preserve default aliases | Saved settings tests and UI check |
+| P9-13 Medium | traffic.ts: after a traffic bus dwell expires, unchanged segment/t immediately meets the same stop condition | Keep a traffic bus on the eligible stop segment: every expiry restarts its four-second dwell | Acknowledge each serviced stop segment until the bus leaves it | Deterministic dwell controller regression |
+| P9-14 Medium | bus.ts: zero-length segment yields division by zero in tangent blending | Sample a route with repeated initial vertices at distance zero: NaN pose | Bound tangent blend denominator; handle one-point probes | Finite-pose regression |
+| P9-15 Medium | App.tsx: Retry only reloads geography; with geography already loaded, failed scene loads cannot be retried by that button | Fail a tile/terrain download after loading the register, then press Retry: banner clears without retrying | Remember and retry the current failed transition, ignoring stale failures | Browser fault injection and recovery |
+| P9-16 Medium | vite.config.ts: generated HTML is watched by the development server | Write a failure HTML capture or subdirectory build: Vite logs a page reload and interrupts active gameplay | Ignore generated artifact/build folders in the dev watcher | Observed reload log and final isolated browser workflows |
+
+Performance risks requiring measurement: monolithic chunk generation/bake, repeated ground updates, memory retention across scene disposal. Physical gamepad compatibility and actual 4 GB hardware performance require suitable hardware; virtual input is not hardware evidence.

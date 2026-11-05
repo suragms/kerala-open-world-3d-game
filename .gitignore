@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-subdirectory/
 .playwright-cli/
 .playwright-mcp/
 *.log
@@ -7,3 +8,10 @@ dist/
 data-cache/
 __pycache__/
 *.pyc
+output/playwright/phase9/
+output/playwright/phase9-*/
+output/playwright/phase10*/
+output/playwright/travel*/
+output/travel-baseline/
+test-results/
+playwright-report/

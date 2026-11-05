@@ -235,6 +235,13 @@ export class Human {
     }
     this.animate(0, 0, 0);
   }
+  rideBicycle(time:number,speed:number,dt:number){
+    this.animate(time,0,0);this.body.position.y=1.02;this.chest.rotation.x=.25;
+    this.leftArm.rotation.x=this.rightArm.rotation.x=-.85;
+    this.leftElbow.rotation.x=this.rightElbow.rotation.x=-.3;
+    this.phase+=speed*dt*2;
+    for(const [i,leg,knee] of [[0,this.leftLeg,this.leftKnee],[1,this.rightLeg,this.rightKnee]] as const){leg.rotation.x=-.8+Math.sin(this.phase+i*Math.PI)*.35;knee.rotation.x=1.1-Math.sin(this.phase+i*Math.PI)*.45;}
+  }
   animate(time: number, speed: number, jump: number, verticalSpeed = 0) {
     const dt = Math.max(0, Math.min(0.05, time - this.previous || 1 / 60));
     this.previous = time;
