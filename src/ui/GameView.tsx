@@ -34,7 +34,8 @@ import type {
 } from "../types";
 import { GameEngine } from "../game/engine";
 import { distance, nearestOnSegment } from "../game/navigation";
-import { formatDistance } from "../data/geography";
+import { taxiFailure } from "../game/taxi";
+import { formatDistance, toGeo } from "../data/geography";
 import { Minimap } from "./Map";
 export interface GamePayload {
   region: Region;
@@ -189,6 +190,15 @@ export function GameView({
         }),
         perf: () => game.perfDiagnostics(),
         journey: () => game.controlDiagnostics().bus,
+        travelProbe: import.meta.env.DEV ? () => ({
+          taxiFailure,
+          bicycle: game.vehicles.find(v=>v.model.kind==='Bicycle')?.position,
+          taxiCandidates: game.world.network.roads.flatMap(r=>r.points).filter(p=>distance(p,game.position)>35&&distance(p,game.position)<350).slice(0,80),
+        }) : undefined,
+        requestLocalTaxi: import.meta.env.DEV ? (point:{x:number;z:number}) => {
+          const coordinate=toGeo(point,game.world.tile.origin);
+          return game.requestTaxi({id:'verification-local-road',name:'Local road destination',district:game.region.id,lat:coordinate[1],lon:coordinate[0],kind:'landmark',source:'Imported road verification',tile:game.world.tile.id});
+        } : undefined,
         advanceJourney: import.meta.env.DEV ? (seconds: number) => game.advanceVerification(seconds) : undefined,
       };
       return () => {
@@ -287,10 +297,15 @@ export function GameView({
               </button>
             </div>
           </div>
+          {snapshot.selectedDestination&&<div className="destination-console"><div><strong>{snapshot.selectedDestination.name}</strong><small>{formatDistance(snapshot.selectedDestination.remaining)} to destination</small></div><button onClick={()=>onAction('map')}>Change destination</button></div>}
+          {snapshot.taxi&&<section className="travel-console" aria-label="Taxi journey"><small>Passenger taxi · local roads</small><h3>{snapshot.taxi.destination}</h3><p role="status">{snapshot.taxi.phase} · {Math.round(snapshot.taxi.speed)} km/h · {formatDistance(snapshot.taxi.remaining)} remaining</p>
+            {!snapshot.taxi.attached?<><p>Walk to the marked pickup point to board.</p><button disabled={!snapshot.taxi.canBoard} onClick={()=>engine.current?.action('boardTaxi')}>Board taxi</button><button onClick={()=>engine.current?.action('cancelTaxi')}>Cancel taxi</button></>:<><button onClick={()=>engine.current?.action('stopTaxi')}>Stop safely</button><button onClick={()=>engine.current?.action('skipTaxi')}>Skip ride</button><button disabled={!snapshot.taxi.canExit} onClick={()=>engine.current?.action('exitTaxi')}>Exit taxi</button></>}
+          </section>}
           <div className="discovery-card">
             <div className="eyebrow">
               <Compass size={14} /> THE JOURNEY IS THE DESTINATION
             </div>
+            <button onClick={()=>onAction("map")}>Change destination</button>
             <h3>
               {snapshot.discovered.includes(payload.tile.id)
                 ? "A little closer to Kerala."
@@ -427,8 +442,9 @@ export function GameView({
             </div>
           </div>
           <div className="mouse-actions">
-            {!snapshot.driving && !snapshot.bus?.attached && !snapshot.rail?.attached ? (
+            {!snapshot.driving && !snapshot.bus?.attached && !snapshot.rail?.attached && !snapshot.taxi?.attached ? (
               <>
+                <button onClick={()=>engine.current?.action("findBicycle")}>Find bicycle</button>
                 <button
                   onClick={() => engine.current?.action("toggleRun")}
                   aria-label="Toggle run"
@@ -466,7 +482,7 @@ export function GameView({
                   onPointerUp={() => engine.current?.setMouseDriveDirection(0)}
                   onPointerCancel={() => engine.current?.setMouseDriveDirection(0)}
                   onLostPointerCapture={() => engine.current?.setMouseDriveDirection(0)}
-                >Reverse</button>
+                >{snapshot.vehicle === "Bicycle" ? "Brake" : "Reverse"}</button>
               </> : null}
               <button onClick={() => engine.current?.action("handbrake")} aria-pressed={snapshot.handbrake}>Handbrake</button>
               <button onClick={() => engine.current?.action("reverse")} aria-pressed={snapshot.reverse} title="Toggle gear while nearly stopped">{snapshot.reverse ? "Reverse gear" : "Forward gear"}</button>
@@ -476,13 +492,13 @@ export function GameView({
             </> : null}
             <button onClick={() => engine.current?.action("camera")} aria-label="Change camera">{snapshot.cameraMode} · Camera</button>
             <button
-              disabled={snapshot.driving || snapshot.bus?.attached || snapshot.rail?.attached}
+              disabled={snapshot.driving || snapshot.bus?.attached || snapshot.rail?.attached || snapshot.taxi?.attached}
               onClick={() => engine.current?.action("jump")}
               aria-label="Jump"
             >
               <ArrowUp size={17} /> Jump
             </button>
-            {!snapshot.bus?.attached ? <button
+            {!snapshot.bus?.attached && !snapshot.taxi?.attached ? <button
               onClick={() => engine.current?.interact()}
               aria-label="Interact"
             >

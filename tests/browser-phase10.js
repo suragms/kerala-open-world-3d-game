@@ -16,11 +16,11 @@ async(page)=>{
   await page.locator('.interact-prompt').click();await page.waitForTimeout(1400);check(!(await state()).driving,'Exit after mixed input safely');
   await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
   await page.getByRole('textbox',{name:'Search places',exact:true}).fill('Thrissur KSRTC Bus Station');
-  await page.getByRole('button',{name:'Bus stations',exact:true}).click();await page.locator('.search-results .place-result').first().click();await page.getByRole('button',{name:'Explore this location',exact:true}).click();
+  await page.getByRole('button',{name:'Bus stands',exact:true}).click();await page.locator('.search-results .place-result').first().click();await page.getByRole('button',{name:'Quick travel',exact:true}).click();
   await page.waitForFunction(()=>window.__KOW__?.diagnostics().area==='station-thrissur');
   await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
   await page.getByRole('textbox',{name:'Search places',exact:true}).fill('Guruvayur KSRTC');
-  await page.getByRole('button',{name:'Bus stations',exact:true}).click();await page.locator('.search-results .place-result').first().click();
+  await page.getByRole('button',{name:'Bus stands',exact:true}).click();await page.locator('.search-results .place-result').first().click();
   await page.getByLabel('Route transport mode',{exact:true}).selectOption('road');
   await page.getByTestId('network-route').waitFor();
   const path=await page.getByTestId('network-route').getAttribute('points');

@@ -833,6 +833,8 @@ export function landmarkModel(theme: Theme, name: string) {
 export { Human } from "./character";
 
 export type VehicleKind =
+  | "Bicycle"
+  | "Taxi"
   | "Hatchback"
   | "Jeep"
   | "Scooter"
@@ -845,6 +847,7 @@ export type VehicleKind =
 export class VehicleModel {
   root = new THREE.Group();
   wheels: THREE.Mesh[] = [];
+  pedals = new THREE.Group();
   brakes: THREE.Mesh[] = [];
   kind: VehicleKind;
   constructor(kind: VehicleKind = "Hatchback", color = "#d8c9a9") {
@@ -853,6 +856,20 @@ export class VehicleModel {
       glass = material("#476065", 0.13, 0.45),
       rubber = material("#252624"),
       chrome = material("#9caaa5", 0.3, 0.65);
+    if(kind==='Bicycle') {
+      const tube=(a:number[],b:number[])=>beam(this.root,body,new THREE.Vector3(...a),new THREE.Vector3(...b),.035);
+      for(const [a,b] of [[[0,.36,.72],[0,.4,0]],[[0,.4,0],[0,1,.2]],[[0,1,.2],[0,.36,.72]],[[0,1,.2],[0,1,-.58]],[[0,1,-.58],[0,.4,0]],[[0,1,-.58],[0,.36,-.75]]] as number[][][])tube(a,b);
+      box(this.root,rubber,0,1.04,.22,.28,.08,.36);
+      box(this.root,chrome,0,1.18,-.56,.65,.05,.06);
+      for(const z of [-.75,.72]){
+        const tire=mesh(this.root,new THREE.TorusGeometry(.34,.035,6,20),rubber,0,.36,z);tire.rotation.y=Math.PI/2;this.wheels.push(tire);
+        for(let a=0;a<Math.PI*2;a+=Math.PI/4)beam(this.root,chrome,new THREE.Vector3(0,.36,z),new THREE.Vector3(0,.36+Math.sin(a)*.31,z+Math.cos(a)*.31),.006);
+      }
+      this.root.add(this.pedals);this.pedals.position.set(0,.4,0);
+      box(this.pedals,chrome,0,0,0,.4,.03,.03);
+      for(const side of [-1,1]){box(this.pedals,chrome,side*.17,side*.13,0,.03,.26,.03);box(this.pedals,rubber,side*.23,side*.26,0,.18,.04,.12);}
+      return;
+    }
     if (kind === "Scooter" || kind === "Motorcycle") {
       box(this.root, body, 0, 0.7, 0, 0.6, 0.45, 1.8);
       box(this.root, rubber, 0, 1.02, 0.2, 0.55, 0.16, 1.15);
@@ -891,6 +908,7 @@ export class VehicleModel {
       }
       return;
     }
+    if(kind==='Taxi'){box(this.root,material('#ffd447'),0,2.12,.1,.62,.25,.3);box(this.root,rubber,0,2.13,-.056,.42,.09,.012);}
     const bus = kind === "Bus",
       jeep = kind === "Jeep",
       w = bus ? 2.6 : 1.85,
@@ -1002,6 +1020,7 @@ export class VehicleModel {
     this.wheels.push(rim);
   }
   animate(speed: number, braking: boolean, dt: number) {
+    if(this.kind==='Bicycle'){for(const wheel of this.wheels)wheel.rotateZ(-speed*dt/.34);this.pedals.rotation.x-=speed*dt*2;return;}
     for (const wheel of this.wheels) wheel.rotateY((-speed * dt) / 0.4);
     for (const brake of this.brakes)
       (brake.material as THREE.MeshStandardMaterial).emissive.set(

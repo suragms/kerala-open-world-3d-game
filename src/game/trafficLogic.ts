@@ -6,6 +6,7 @@ import { routeLengths, sampleRoute } from "./bus";
 export type TrafficPhase = "cruising" | "following" | "signal" | "yielding" | "crossing" | "blocked" | "road-end" | "bus-stop";
 export interface TrafficBody { halfWidth:number; halfLength:number; height:number; }
 export function trafficBody(kind:string):TrafficBody {
+  if(kind==='Bicycle')return {halfWidth:.42,halfLength:1.05,height:1.9};
   if(kind==="Scooter"||kind==="Motorcycle")return {halfWidth:.48,halfLength:1.18,height:1.6};
   if(kind==="Auto rickshaw")return {halfWidth:.8,halfLength:1.35,height:2.2};
   if(kind==="Bus")return {halfWidth:1.4,halfLength:4.7,height:3.2};

@@ -17,7 +17,7 @@ async (page) => {
       .getByRole("button", { name: `Select ${region.name}`, exact: true })
       .click();
     await page
-      .getByRole("button", { name: "Explore this location", exact: true })
+      .getByRole("button", { name: "Quick travel", exact: true })
       .click();
     await page.waitForFunction(
       (id) => window.__KOW__?.diagnostics().region === id,

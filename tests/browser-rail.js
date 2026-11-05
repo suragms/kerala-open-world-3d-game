@@ -3,7 +3,7 @@ async(page)=>{
   await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
   await page.getByRole('textbox',{name:'Search places',exact:true}).fill('Thrissur railway station');
   await page.locator('.search-results .place-result').first().click();
-  await page.getByRole('button',{name:'Explore this location',exact:true}).click();
+  await page.getByRole('button',{name:'Quick travel',exact:true}).click();
   await page.waitForFunction(()=>window.__KOW__?.diagnostics().area==='station-thrissur');
   await page.getByRole('button',{name:'Walk to rail boarding area',exact:true}).click();
   for(let i=0;i<100;i++){await page.evaluate(()=>window.__KOW__.advanceJourney(10));if((await state()).rail.canBoard)break;}

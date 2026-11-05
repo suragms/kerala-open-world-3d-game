@@ -8,7 +8,7 @@ async (page) => {
   await page.getByRole('button',{name:'Done',exact:false}).click();
   const scene=async(name)=>{
     await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
-    await page.getByRole('button',{name:`Select ${name}`,exact:true}).click();await page.getByRole('button',{name:'Explore this location',exact:true}).click();
+    await page.getByRole('button',{name:`Select ${name}`,exact:true}).click();await page.getByRole('button',{name:'Quick travel',exact:true}).click();
     await page.waitForFunction(()=>!!window.__KOW__?.snapshot());await page.waitForTimeout(3000);
   };
   const measure=async(name,seconds)=>{
@@ -33,7 +33,7 @@ async (page) => {
     await page.keyboard.down('Shift');await page.keyboard.down('ArrowRight');await measure(label,30);await page.keyboard.up('ArrowRight');await page.keyboard.up('Shift');
   }
   await scene('Thrissur');await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
-  await page.getByRole('textbox',{name:'Search places',exact:true}).fill('Thrissur KSRTC Bus Station');await page.getByRole('button',{name:'Bus stations',exact:true}).click();await page.locator('.search-results .place-result').first().click();await page.getByRole('button',{name:'Explore this location',exact:true}).click();await page.waitForFunction(()=>window.__KOW__?.diagnostics().area==='station-thrissur');
+  await page.getByRole('textbox',{name:'Search places',exact:true}).fill('Thrissur KSRTC Bus Station');await page.getByRole('button',{name:'Bus stands',exact:true}).click();await page.locator('.search-results .place-result').first().click();await page.getByRole('button',{name:'Quick travel',exact:true}).click();await page.waitForFunction(()=>window.__KOW__?.diagnostics().area==='station-thrissur');
   await page.getByRole('button',{name:'Mouse movement',exact:true}).click();await page.getByRole('button',{name:'Toggle run',exact:true}).click();
   await page.getByRole('button',{name:'Travel by bus, rail or air',exact:true}).click();await page.locator('.bus-service').filter({hasText:'Guruvayur KSRTC'}).getByRole('button',{name:/Walk to departure station/}).click();
   for(let i=0;i<30&&!(await page.evaluate(()=>window.__KOW__.snapshot().nearStation));i++)await page.evaluate(()=>window.__KOW__.advanceJourney(2));

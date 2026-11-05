@@ -194,6 +194,8 @@ export interface SaveData {
   cameraState?: {yaw:number;pitch:number;distance:number};
 }
 export interface Snapshot {
+  taxi?: import('./game/taxi').TaxiSnapshot;
+  selectedDestination?: { name:string; remaining:number };
   position: Vec2;
   yaw: number;
   lat: number;

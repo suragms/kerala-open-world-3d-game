@@ -6,7 +6,7 @@ async(page)=>{
   };
   await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
   await page.getByRole('textbox',{name:'Search places',exact:true}).fill('Thrissur KSRTC Bus Station');
-  await page.getByRole('button',{name:'Bus stations',exact:true}).click();await page.locator('.search-results .place-result').first().click();await page.getByRole('button',{name:'Explore this location',exact:true}).click();
+  await page.getByRole('button',{name:'Bus stands',exact:true}).click();await page.locator('.search-results .place-result').first().click();await page.getByRole('button',{name:'Quick travel',exact:true}).click();
   await page.waitForFunction(()=>window.__KOW__?.diagnostics().area==='station-thrissur');
   await page.getByRole('button',{name:'Travel by bus, rail or air',exact:true}).click();
   await page.getByRole('combobox',{name:'Bus type',exact:true}).selectOption('coach');

@@ -32,7 +32,7 @@ async (page) => {
   for(const district of ['ernakulam','wayanad','thrissur','ernakulam','wayanad','thrissur']){
     await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
     await page.getByRole('button',{name:`Select ${district==='ernakulam'?'Ernakulam':district==='wayanad'?'Wayanad':'Thrissur'}`,exact:true}).click();
-    await page.getByRole('button',{name:'Explore this location',exact:true}).click();
+    await page.getByRole('button',{name:'Quick travel',exact:true}).click();
     await page.waitForFunction(id=>window.__KOW__?.diagnostics().region===id,district);
     await page.waitForFunction(()=>window.__KOW__.perf().streaming.queued===0);
     const diag=await page.evaluate(()=>window.__KOW__.diagnostics()),perf=await page.evaluate(()=>window.__KOW__.perf());

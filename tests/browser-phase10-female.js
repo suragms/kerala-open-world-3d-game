@@ -119,7 +119,7 @@ async (page) => {
   check(restored.locality===save.locality && /Guruvayur/.test(restored.locality),'Destination locality did not restore');
   await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
   await page.getByRole('button',{name:'Select Kannur',exact:true}).click();
-  await page.getByRole('button',{name:'Explore this location',exact:true}).click();
+  await page.getByRole('button',{name:'Quick travel',exact:true}).click();
   await page.waitForFunction(()=>window.__KOW__?.diagnostics().region==='kannur');
   check(errors.length===0,errors.join('\n'));
   return {clock:'Accelerated deterministic integration of the normal live simulation; no Fast Journey used',walkingStart,atStation,requestedStop,resumed,arrived,restored,phases:[...phases],before,samples,save,continuedExploration:await state(),errors};

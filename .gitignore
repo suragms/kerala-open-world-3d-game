@@ -11,5 +11,7 @@ __pycache__/
 output/playwright/phase9/
 output/playwright/phase9-*/
 output/playwright/phase10*/
+output/playwright/travel*/
+output/travel-baseline/
 test-results/
 playwright-report/

@@ -1,4 +1,8 @@
 import { deadzone } from "./gamepad";
+export function bicycleThrottle(speed:number,accelerator:number,brake:number,dt:number){
+  if(![speed,accelerator,brake,dt].every(Number.isFinite)||dt<=0)return Math.max(0,Number.isFinite(speed)?speed:0);
+  return Math.max(0,Math.min(25/3.6,speed+(brake>0?-6*Math.min(1,brake):1.8*Math.max(0,Math.min(1,accelerator))-.18*speed)*dt));
+}
 export function mouseSteering(position: number, neutral: number, sensitivity: number, zone: number) {
   return deadzone(Math.max(-1, Math.min(1, (position - neutral) * sensitivity)), zone);
 }

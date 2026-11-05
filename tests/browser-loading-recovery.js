@@ -3,7 +3,7 @@ async (page) => {
   const select=async name=>{
     await page.getByRole('button',{name:'Open world map',exact:true}).first().click();
     await page.getByRole('button',{name:`Select ${name}`,exact:true}).click();
-    await page.getByRole('button',{name:'Explore this location',exact:true}).click();
+    await page.getByRole('button',{name:'Quick travel',exact:true}).click();
   };
   let terrainAttempts=0;
   await page.route('**/data/elevation-kollam.json',async route=>{
@@ -22,7 +22,7 @@ async (page) => {
   await select('Pathanamthitta');
   // Reproduce already-queued navigation events while the previous transition is still pending.
   await page.getByRole('button',{name:'Select Alappuzha',exact:true}).dispatchEvent('click');
-  await page.getByRole('button',{name:'Explore this location',exact:true}).dispatchEvent('click');
+  await page.getByRole('button',{name:'Quick travel',exact:true}).dispatchEvent('click');
   await page.waitForFunction(()=>window.__KOW__?.diagnostics().region==='alappuzha');await page.waitForTimeout(1800);
   check(staleAttempts===2,'Stale request did not exercise its failure handler');
   check(await page.locator('.error-banner').count()===0,'An older failed request overwrote the current scene');
